@@ -1,6 +1,9 @@
 {% extends "layout.html.j2" %}
 {% block content %}
-  {% include "basic_header.html.j2" %}
+{% include "basic_header.html.j2" %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
   <div class="row mb-4">
   	<div class="col">
 		To support the database, we need to keep a tally on how many and what kinds of users benefited from its services.<br />
@@ -20,7 +23,7 @@
              <input type="password" name="token" class="form-control" placeholder="Password" required>
           </div>
           <div class="form-group mb-4 text-end">
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="button" class="btn btn-primary" id="submitBtn">Login</button>
           </div>
        </form>
      </div>
@@ -100,56 +103,130 @@
           <div class="form-group mb-4 text-end">
             <button type="button" id="signup_btn" class="btn btn-primary">Sign up</button>
           </div>
+	  <div class="modal fade" id="captchaModalLogin" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Verify You're Human</h5>
+      </div>
+      <div class="modal-body text-center">
+        <div class="g-recaptcha" data-sitekey="{{ captcha_sitekey }}" data-callback="onCaptchaSuccessLogin"></div>
+      </div>
+    </div>
+  </div>
+  
+	  </div>
+	  <div class="modal fade" id="captchaModalRegister" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Verify You're Human</h5>
+      </div>
+      <div class="modal-body text-center">
+        <div class="g-recaptcha" data-sitekey="{{ captcha_sitekey }}" data-callback="onCaptchaSuccessRegister"></div>
+      </div>
+    </div>
+  </div>
+  
+	  </div>
+	  <script type="text/javascript">
+	    function onCaptchaSuccessLogin(token) {
+		$('#captchaModalLogin').modal('hide');
+
+		$('#captchaModalLogin').one('hidden.bs.modal', function () {
+		    $('#form_login').submit();
+		});
+	    }
+	    $(document).ready(function () {
+		const $form = $('#form_login');
+		const $modalLogin = $('#captchaModalLogin');
+
+
+		$('#submitBtn').on('click', function () {
+		    if (!$form[0].checkValidity()) {
+			$form[0].reportValidity();
+			return;
+		    }
+		    $modalLogin.modal('show');
+		});
+
+		$modalLogin.on('shown.bs.modal', function () {
+		    $(this).removeAttr('aria-hidden');
+		    $('#captchaConfirm').focus();
+		});
+
+		$modalLogin.on('hidden.bs.modal', function () {
+		    $(this).attr('aria-hidden', 'true');
+		});
+	    });
+	  </script>
           <script type="text/javascript">
-            function check_category() {
-               let selected_category = $("input[name=category]:checked").val();
-               if (selected_category === "academia") {
-                  $("#jobtitle").parent().removeClass("d-none");
-               } else {
-                  $("#jobtitle").parent().addClass("d-none");
-               }               
-            }
-            $(document).ready(function() {
-               $("input[type=radio][name=category]").on("change", function() {
-                  check_category();
-               });
-               check_category();
-               $("#signup_btn").click(function() {
-                  if (!$("#form_register")[0].reportValidity()) {
-                     return False;
-                  }
-                  let modal_content = "";
-                  modal_content += "<div class='row m-2'><div class='col'>" +
-                     "<ul class='list-group'>" +
-                        "<li class='list-group-item'>1. NPDC genomes downloaded from the NPDC Genome Portal may not be uploaded to any other databases or made public without prior written consent from the director of the NPDC.</li>" +
-                        "<li class='list-group-item'>2. Upon completion of the contract, the requestor is responsible for handling of biological material consistent with legal requirements.</li>" +
-                        "<li class='list-group-item'>3. By making a request, the requestor affirms that they are familiar with all relevant safety protocols and have access to any necessary equipment, training, and facilities.</li>" +
-                        "<li class='list-group-item'>4. Due to the nature of bacterial strains, they may be hazardous beyond the knowledge of NPDC. They may also vary in quality due to reasons beyond the control of NPDC.</li>" +
-                        "<li class='list-group-item'>5. NPDC assumes no responsibility for any damage or delays during the shipping of the bacterial strains.</li>" +
-                        "<li class='list-group-item'>6. NPDC reserves the right to reject any request or make a strain unavailable without any prior notice.</li>" +
-                     "</ul>" +
-                  "</div>";
-                  modal_content += "<div class='row text-center mt-4'><div class='col'>" + "<input class='form-check-input' type='checkbox' id='agree_terms' />" + "<label class='form-check-label' for='agree_terms'>&nbsp;&nbsp;I agree</label>" + "</div></div>";
-                  modal_content += "<div class='row text-center mt-2'><div class='col'>" + "<button id='form_register_submit' class='btn btn-primary disabled' type='button'>Submit</button>" + "</div>";
-                  showModal("Terms & Conditions", modal_content,
-                     on_show=function(){
-                        $("#agree_terms").change(function() {
-                           if ($(this).is(":checked")) {
-                              $("#form_register_submit").removeClass("disabled");
-                           } else {
-                              $("#form_register_submit").addClass("disabled");
-                           }
-                        });
-                        $("#agree_terms").trigger("change");
-                        $("#form_register_submit").click(function() {
-                           hideModal();
-                           $("#form_register").submit();
-                        });
-                     }, on_close=function(){
-                        //..
-                     })
-                  })
-            });
+	   function onCaptchaSuccessRegister(token) {
+	       $('#captchaModalRegister').modal('hide');
+
+	       $('#captchaModalRegister').one('hidden.bs.modal', function () {
+		       $('#form_register').submit();
+	       });
+	   }
+	   function check_category() {
+	       let selected_category = $("input[name=category]:checked").val();
+	       if (selected_category === "academia") {
+		   $("#jobtitle").parent().removeClass("d-none");
+	       } else {
+		   $("#jobtitle").parent().addClass("d-none");
+			  }               
+	   }
+	   $(document).ready(function() {
+	       const $modalRegister = $('#captchaModalRegister');
+	       $("input[type=radio][name=category]").on("change", function() {
+		   check_category();
+	       });
+	       check_category();
+	       $("#signup_btn").click(function() {
+		   if (!$("#form_register")[0].reportValidity()) {
+				return False;
+		   }
+		   let modal_content = "";
+		   modal_content += "<div class='row m-2'><div class='col'>" +
+		       "<ul class='list-group'>" +
+		       "<li class='list-group-item'>1. NPDC genomes downloaded from the NPDC Genome Portal may not be uploaded to any other databases or made public without prior written consent from the director of the NPDC.</li>" +
+		       "<li class='list-group-item'>2. Upon completion of the contract, the requestor is responsible for handling of biological material consistent with legal requirements.</li>" +
+		       "<li class='list-group-item'>3. By making a request, the requestor affirms that they are familiar with all relevant safety protocols and have access to any necessary equipment, training, and facilities.</li>" +
+		       "<li class='list-group-item'>4. Due to the nature of bacterial strains, they may be hazardous beyond the knowledge of NPDC. They may also vary in quality due to reasons beyond the control of NPDC.</li>" +
+		       "<li class='list-group-item'>5. NPDC assumes no responsibility for any damage or delays during the shipping of the bacterial strains.</li>" +
+		       "<li class='list-group-item'>6. NPDC reserves the right to reject any request or make a strain unavailable without any prior notice.</li>" +
+		       "</ul>" +
+		       "</div>";
+		   modal_content += "<div class='row text-center mt-4'><div class='col'>" + "<input class='form-check-input' type='checkbox' id='agree_terms' />" + "<label class='form-check-label' for='agree_terms'>&nbsp;&nbsp;I agree</label>" + "</div></div>";
+
+		   modal_content += "<div class='row text-center mt-2'><div class='col'>" + "<button id='form_register_submit' class='btn btn-primary disabled' type='button'>Submit</button>" + "</div>";
+		   showModal("Terms & Conditions", modal_content,
+			     on_show=function(){
+				 $("#agree_terms").change(function() {
+				     if ($(this).is(":checked")) {
+					 $("#form_register_submit").removeClass("disabled");
+				     } else {
+					 $("#form_register_submit").addClass("disabled");
+				     }
+				 });
+				 $("#agree_terms").trigger("change");
+				 $("#form_register_submit").click(function() {
+				     hideModal();
+				     $modalRegister.modal('show');
+				 });
+				 $modalRegister.on('shown.bs.modal', function () {
+				     $(this).removeAttr('aria-hidden');
+				     $('#captchaConfirm').focus();
+				 });
+
+				 $modalRegister.on('hidden.bs.modal', function () {
+				     $(this).attr('aria-hidden', 'true');
+				 });
+			     }, on_close=function(){
+				   //..
+			     })
+	       })
+	   });
           </script>
        </form>
      </div>

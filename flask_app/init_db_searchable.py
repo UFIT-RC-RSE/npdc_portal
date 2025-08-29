@@ -225,7 +225,7 @@ if __name__ == "__main__":
         with sqlite3.connect(conf["query_db_path"]) as con:
             cur = con.cursor()
             schema_sql = path.join(
-            con.commit()
+                con.commit(),
                 path.dirname(__file__),
                 "..",
                 "sql_schemas",
