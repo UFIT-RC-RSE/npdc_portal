@@ -7,7 +7,9 @@ import pandas as pd
 import string
 import random
 from datetime import datetime
+import os
 
+RECAPTCHA_SITE_KEY = os.getenv('RECAPTCHA_SITE_KEY')
 
 def generate_token(size):
     chars = list(set(string.ascii_uppercase + string.digits).difference('LIO01'))
@@ -61,7 +63,8 @@ def page_login():
         page_title=page_title,
         page_subtitle=page_subtitle,
         job_titles=job_titles,
-        countries=countries
+        countries=countries,
+        captcha_sitekey=RECAPTCHA_SITE_KEY
     )
 
 
