@@ -34,10 +34,10 @@
               $("#download_genome_btn").click(function() {
                 let modal_content = "";
                 modal_content += "<div class='row text-center'>";
-                modal_content += "<div class='col'>" + 
+                modal_content += "<div class='col'>" +
                   "<button class='btn btn-primary' id='btn_download_genome_fasta'>Nucleotide Fasta (.fna)</button>" +
                   "</div>";
-                modal_content += "<div class='col'>" + 
+                modal_content += "<div class='col'>" +
                   "<button class='btn btn-primary' id='btn_download_genome_genbank'>Annotated GenBank (.gbk)</button>" +
                   "</div>";
                 modal_content += "<div class='row'>";
@@ -72,7 +72,7 @@
       </div>
     </div>
   </div>
-	
+
   <hr />
 
   <div class="row mb-4">
@@ -176,7 +176,7 @@
               </h2>
           </div>
         </div>
-      </div>      
+      </div>
     </div>
   </div>
 
@@ -344,7 +344,7 @@
                                   render: function(data, type, row, meta) {
                                     let [bgc_id, npdc_id, contig_num, region_name] = data;
                                     let bgc_num = parseInt(region_name.split("region")[1], 10);
-                                    let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                      
+                                    let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                   
                                     return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                                   }
                                 },
@@ -357,12 +357,12 @@
                                 {
                                   targets: 6,
                                   render: function(data, type, row, meta) {
-                                    let html_text = "";
+                                    let [fragmented, fragmented_status] = data;
                                     let badge_class = {
                                       1: ["fragmented", "rounded-pill bg-warning"],
                                       0: ["complete", "rounded-pill bg-success"]
                                     };
-                                    html_text += "<span class='badge m-1 " + badge_class[data][1] + "'>" + badge_class[data][0] + "</span>";
+                                    let html_text = "<span class='badge m-1 " + badge_class[fragmented][1] + "'>" + badge_class[fragmented][0] + "</span>";
                                     return html_text;
                                   }
                                 },
@@ -504,7 +504,7 @@
                                 {
                                   targets: 6,
                                   render: function(data, type, row, meta) {
-                                    return data.length;
+                                    return data;
                                   }
                                 }
                               ]
