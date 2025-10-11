@@ -11,7 +11,8 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-# import global config
+# import global config(s)
+from ..npdc_config import conf as npdc_conf
 from app.config import conf
 
 # import controllers
@@ -64,16 +65,12 @@ def portal():
     app.config['DEBUG'] = True
 
     # secret key for session
-    app.secret_key = open(conf["session_key_path"], "r").read().rstrip("\n")
+    app.secret_key = os.getenv('SESSION_KEY')
 
-    # e-mail configuration
-    for key, val in (json.load(open(conf["email_config_path"], "r"))).items():
+    # load in application environment configurations
+    for key, val in npdc_config.items():
         app.config[key] = val
-
-    # other app configuration
-    for key, val in (json.load(open(conf["app_config_path"], "r"))).items():
-        app.config[key] = val
-
+    
     # register controllers
     app.register_blueprint(root.blueprint)
     app.register_blueprint(login.blueprint)
@@ -108,8 +105,12 @@ def portal():
         # get last db update stats
         with sqlite3.connect(conf["db_path"]) as con:
             cur = con.cursor()
-            last_db_updated, = cur.execute("select logs.time from logs where message like 'START' limit 1").fetchone()
-            last_db_updated = datetime.strptime(last_db_updated, "%Y-%m-%d %H:%M:%S")
+            try:
+                last_db_updated, = cur.execute("select logs.time from logs where message like 'START' limit 1").fetchone()
+                last_db_updated = datetime.strptime(last_db_updated, "%Y-%m-%d %H:%M:%S")
+
+            except Exception as e:
+                last_db_updated = datetime.now() # placeholder for testing - indicates no records
             now_date = datetime.now()
             last_db_updated_days = (now_date - last_db_updated).days
 

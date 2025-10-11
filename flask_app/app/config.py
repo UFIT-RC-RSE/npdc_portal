@@ -17,9 +17,6 @@ conf["genome_folder_path"] = path.join(conf["instance_folder"], "db_data/genome_
 conf["bgc_folder_path"] = path.join(conf["instance_folder"], "db_data/bgc_files/")
 conf["user_db_path"] = path.join(conf["instance_folder"], "accounts.db")
 conf["query_db_path"] = path.join(conf["instance_folder"], "queries.db")
-conf["session_key_path"] = path.join(conf["instance_folder"], "session_key.txt")
-conf["email_config_path"] = path.join(conf["instance_folder"], "email_config.json")
-conf["app_config_path"] = path.join(conf["instance_folder"], "app_config.json")
 conf["strain_pictures_folder_path"] = path.join(conf["instance_folder"], "strain_pictures")
 conf["temp_download_folder"] = path.join(conf["instance_folder"], "tmp_download")
 

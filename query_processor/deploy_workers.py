@@ -14,6 +14,8 @@ import numpy as np
 import subprocess
 import json
 
+# import global config(s)
+from ..npdc_config import conf as npdc_conf
 
 def fetch_pending_jobs(jobs_db):
     with connect(jobs_db) as con:
@@ -177,11 +179,6 @@ def main():
         print("database is not up-to-date, please run init_db.py first!!")
         return(1)
 
-    # load config
-    conf = {}
-    for key, val in (json.load(open(path.join(instance_folder, "app_config.json"), "r"))).items():
-        conf[key] = val
-
     # fetch jobs in process that got interrupted previously, re-set to pending
     with connect(jobs_db) as con:
         cur = con.cursor()
@@ -201,7 +198,7 @@ def main():
             print("deploying {} jobs...".format(
                 len(pending)
             ))
-            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, conf["blast_genome_limit"])
+            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, npdc_conf["blast_genome_limit"])
 
         sleep(5)
 
