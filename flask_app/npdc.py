@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from flask import Flask, redirect, url_for, session, render_template, request
-from os import path
+from os import path, getenv
 import sqlite3
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 # import global config(s)
-from ..npdc_config import conf as npdc_conf
+from npdc_config import conf as npdc_conf
 from app.config import conf
 
 # import controllers
@@ -65,10 +65,10 @@ def portal():
     app.config['DEBUG'] = True
 
     # secret key for session
-    app.secret_key = os.getenv('SESSION_KEY')
+    app.secret_key = getenv('SESSION_KEY')
 
     # load in application environment configurations
-    for key, val in npdc_config.items():
+    for key, val in npdc_conf.items():
         app.config[key] = val
     
     # register controllers

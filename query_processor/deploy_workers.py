@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import path, listdir
+from os import path, listdir, getenv
 from subprocess import run, DEVNULL
 from shutil import copytree
 from tempfile import TemporaryDirectory
@@ -13,9 +13,6 @@ import pandas as pd
 import numpy as np
 import subprocess
 import json
-
-# import global config(s)
-from ..npdc_config import conf as npdc_conf
 
 def fetch_pending_jobs(jobs_db):
     with connect(jobs_db) as con:
@@ -192,13 +189,17 @@ def main():
 
 
     print("workers are running...")
+
+    # get the genome limit for BLAST results
+    blast_genome_limit = int(getenv('BLAST_GENOME_LIMIT'))
+    
     while(True):
         pending = fetch_pending_jobs(jobs_db)
         if len(pending) > 0:
             print("deploying {} jobs...".format(
                 len(pending)
             ))
-            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, npdc_conf["blast_genome_limit"])
+            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, blast_genome_limit)
 
         sleep(5)
 
