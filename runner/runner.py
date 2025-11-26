@@ -3,12 +3,22 @@
 from multiprocessing import Process
 from time import sleep
 import subprocess
+import sys
 from sys import argv
 from os import path
 from datetime import datetime
 import glob
+import logging
 
 from runner_config import conf
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout),
+              logging.StreamHandler(sys.stderr)
+              ]
+)
 
 
 def start_webserver(num_threads, port):
@@ -16,21 +26,23 @@ def start_webserver(num_threads, port):
     while True:
 
         try:
-            print("starting WEBSERVER")
+            logging.info("starting WEBSERVER")
             cmd = (
                 "gunicorn -w {} -b 0.0.0.0:{} --log-level debug \"npdc:portal()\"".format(
                     num_threads,
                     port
                 )
             )
-            subprocess.check_output(cmd,
+            subprocess.run(cmd,
                 cwd=path.join(path.dirname(path.dirname(__file__)), "flask_app"),
+                stdout=sys.stdout,
+                stderr=sys.stdout,
                 shell=True
             )
         except subprocess.CalledProcessError as e:
-            print(e.output)
-            print("WEBSERVER ERROR!!")
-        print("restarting WEBSERVER in 5 seconds...")
+            logging.error(e.output)
+            logging.error("WEBSERVER ERROR!!")
+        logging.info("restarting WEBSERVER in 5 seconds...")
         sleep(5)
 
     return
@@ -41,7 +53,7 @@ def start_blastserver(num_threads, ram_size_gb, use_srun):
     while True:
 
         try:
-            print("starting BLASTSERVER")
+            logging.info("starting BLASTSERVER")
             cmd = (
                 "python deploy_workers.py {} {} {}".format(
                     num_threads,
@@ -49,14 +61,16 @@ def start_blastserver(num_threads, ram_size_gb, use_srun):
                     1 if use_srun else 0
                 )
             )
-            subprocess.check_output(cmd,
+            subprocess.run(cmd,
                 cwd=path.join(path.dirname(path.dirname(__file__)), "query_processor"),
+                stdout=sys.stdout,
+                stderr=sys.stdout,
                 shell=True
             )
         except subprocess.CalledProcessError as e:
-            print(e.output)
-            print("BLASTSERVER ERROR!!")
-        print("restarting BLASTSERVER in 5 seconds...")
+            logging.error(e.output)
+            logging.error("BLASTSERVER ERROR!!")
+        logging.info("restarting BLASTSERVER in 5 seconds...")
         sleep(5)
 
     return
@@ -67,21 +81,23 @@ def start_downloadserver(num_threads, use_srun):
     while True:
 
         try:
-            print("starting DOWNLOADSERVER")
+            logging.info("starting DOWNLOADSERVER")
             cmd = (
                 "python result_download_processor.py {} {}".format(
                     num_threads,
                     1 if use_srun else 0
                 )
             )
-            subprocess.check_output(cmd,
+            subprocess.run(cmd,
                 cwd=path.join(path.dirname(path.dirname(__file__)), "query_processor"),
+                stdout=sys.stdout,
+                stderr=sys.stdout,
                 shell=True
             )
         except subprocess.CalledProcessError as e:
-            print(e.output)
-            print("DOWNLOADSERVER ERROR!!")
-        print("restarting DOWNLOADSERVER in 5 seconds...")
+            logging.error(e.output)
+            logging.error("DOWNLOADSERVER ERROR!!")
+        logging.info("restarting DOWNLOADSERVER in 5 seconds...")
         sleep(5)
 
     return
@@ -89,7 +105,7 @@ def start_downloadserver(num_threads, use_srun):
 
 def autobackup():
 
-    backup_folder = path.abspath(path.join(path.dirname(path.dirname(__file__)), "instance", "backups"))
+    backup_folder = path.abspath(path.join("/npdc_portal", "instance", "backups"))
 
     while True:
         all_backups = [path.basename(fp) for fp in sorted(glob.glob(path.join(backup_folder, "backup-*")), reverse=True)]
@@ -107,14 +123,14 @@ def autobackup():
                 path.join(backup_folder, backup_name)
             ), shell=True)
             subprocess.run("cp {} {}".format(
-                path.abspath(path.join(path.dirname(path.dirname(__file__)), "instance", "accounts.db")),
+                path.abspath(path.join("/npdc_portal", "instance", "accounts.db")),
                 path.join(backup_folder, backup_name, "accounts.db")
             ), shell=True)
             subprocess.run("cp {} {}".format(
-                path.abspath(path.join(path.dirname(path.dirname(__file__)), "instance", "queries.db")),
+                path.abspath(path.join("/npdc_portal", "instance", "queries.db")),
                 path.join(backup_folder, backup_name, "queries.db")
             ), shell=True)
-            
+
 
         sleep(60)
 
