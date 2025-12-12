@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from os import path, listdir
+from os import path, listdir, getenv
 from subprocess import run, DEVNULL
 from shutil import copytree
 from tempfile import TemporaryDirectory
@@ -13,7 +13,6 @@ import pandas as pd
 import numpy as np
 import subprocess
 import json
-
 
 def fetch_pending_jobs(jobs_db):
     with connect(jobs_db) as con:
@@ -39,7 +38,7 @@ def deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_siz
             ), (1, datetime.now(), job_id))
             con.commit()
 
-        with TemporaryDirectory() as temp_dir:
+        with TemporaryDirectory(dir=path.join('/npdc_portal', 'instance', 'tmp')) as temp_dir:
             query_proteins = pd.read_sql((
                     "select id,aa_seq from query_proteins"
                     " where jobid=?"
@@ -60,19 +59,20 @@ def deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_siz
             # run DIAMOND BLASTP
             blast_columns = "qseqid sseqid qstart qend sstart send evalue bitscore pident slen qlen"
             diamond_blast_db_path = path.join(
-                path.dirname(__file__),
-                "..",
-                "instance",
+                getenv('INSTANCE_GLOBAL_PATH'),
                 "db_data",
                 "npdc_portal.dmnd"
             )
             blast_output_path = path.join(temp_dir, "output.txt")
+            blast_tmpdir = path.join(getenv('INSTANCE_GLOBAL_PATH'), 'tmp')
             try:
-                cmd = "{}diamond blastp -d {} -q {} -e 1e-10 -o {} -f 6 {} --ignore-warnings --query-cover 80 --id 40 -k 999999 -p {} -b{:.1f} -c1".format(
-                    "srun -c {} -n 1 --mem={}G -t 1000 ".format(num_threads, ram_size_gb) if use_srun else "",
-                    diamond_blast_db_path,
-                    fasta_input_path,
-                    blast_output_path,
+                cmd = "{}{} blastp --verbose -t {} -d {} -q {} -e 1e-10 -o {} -f 6 {} --ignore-warnings --query-cover 80 --id 40 -k 999999 -p {} -b{:.1f} -c1".format(
+                    "srun --chdir {} -c {} -n 1 --mem={}G -t 1000 ".format(getenv('INSTANCE_GLOBAL_PATH'), num_threads, ram_size_gb) if use_srun else "",
+                    getenv('DIAMOND_GLOBAL_PATH'),
+                    blast_tmpdir,
+                    diamond_blast_db_path.replace(path.join('/npdc_portal', 'instance'), getenv('INSTANCE_GLOBAL_PATH')),
+                    fasta_input_path.replace(path.join('/npdc_portal', 'instance'), getenv('INSTANCE_GLOBAL_PATH')),
+                    blast_output_path.replace(path.join('/npdc_portal', 'instance'), getenv('INSTANCE_GLOBAL_PATH')),
                     blast_columns,
                     num_threads,
                     max(1, ram_size_gb / 7)
@@ -170,17 +170,12 @@ def main():
         "..",
         "instance"
     )
+
     jobs_db = path.join(instance_folder, "queries.db")
     npdc_db = path.join(instance_folder, "db_data", "npdc_portal.db")
-
     if not path.exists(jobs_db):
         print("database is not up-to-date, please run init_db.py first!!")
         return(1)
-
-    # load config
-    conf = {}
-    for key, val in (json.load(open(path.join(instance_folder, "app_config.json"), "r"))).items():
-        conf[key] = val
 
     # fetch jobs in process that got interrupted previously, re-set to pending
     with connect(jobs_db) as con:
@@ -189,19 +184,23 @@ def main():
         status_enums.index = status_enums["name"]
         status_enums = status_enums["code"].to_dict()
         cur.execute(("update jobs set status=? where status=?"), (
-            status_enums["PENDING"],            
+            status_enums["PENDING"],
             status_enums["PROCESSING"]
         ))
 
 
     print("workers are running...")
+
+    # get the genome limit for BLAST results
+    blast_genome_limit = int(getenv('BLAST_GENOME_LIMIT'))
+
     while(True):
         pending = fetch_pending_jobs(jobs_db)
         if len(pending) > 0:
             print("deploying {} jobs...".format(
                 len(pending)
             ))
-            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, conf["blast_genome_limit"])
+            deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, blast_genome_limit)
 
         sleep(5)
 

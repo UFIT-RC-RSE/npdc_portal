@@ -8,6 +8,7 @@ from datetime import datetime
 import re
 import json
 from flask import jsonify
+import sys
 
 # import global config
 from ..config import conf
@@ -26,7 +27,7 @@ def page_genomes():
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # page title
     page_title = "Genomes"
     page_subtitle = (
@@ -47,14 +48,14 @@ def page_genomes_view(genome_id):
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # grab genome's npdc id
     try:
         npdc_id = pd.read_sql_query((
             "select npdc_id from genomes"
             " where id=?"
         ), sqlite3.connect(conf["db_path"]), params=(genome_id, )).iloc[0, 0]
-    except:        
+    except:
         flash("can't find genome id", "alert-danger")
         return redirect(url_for("home.page_home"))
 
@@ -95,7 +96,7 @@ def page_genomes_download(genome_id):
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # check if genomes exists
     try:
         genome_data = pd.read_sql_query((
@@ -188,17 +189,17 @@ def get_overview():
         cur = con.cursor()
         sql_filter = "1"
         sql_filter_params = []
-
+        print(conf["db_path"], file=sys.stderr, flush=True)
         if request.args.get("mash_group", "") != "":
             sql_filter += " and genome_mash_species like ?"
             sql_filter_params.append(request.args.get("mash_group"))
         if request.args.get("exclude_id", "") != "":
             sql_filter += " and genomes.id<>?"
-            sql_filter_params.append(request.args.get("exclude_id")) 
+            sql_filter_params.append(request.args.get("exclude_id"))
 
         if search_value:
             is_numeric_search = search_value.replace('.', '', 1).isdigit()
-            parts = re.split(r'\s+and\s+', search_value, flags=re.IGNORECASE)            
+            parts = re.split(r'\s+and\s+', search_value, flags=re.IGNORECASE)
             for part in parts:
                 part_handled = False
                 part = part.strip()
@@ -207,17 +208,17 @@ def get_overview():
                     user_column = user_column_with_bracket.rsplit(']', 1 )[0].strip()
                     term = term.strip()
                     db_column = column_mapping.get(user_column, None )
-                    if db_column:                   
+                    if db_column:
                         if db_column in default_numeric_columns:
                             numeric_filter, numeric_params = construct_numeric_filter(term, db_column)
                             sql_filter += numeric_filter
-                            sql_filter_params.extend(numeric_params)                          
+                            sql_filter_params.extend(numeric_params)
                             part_handled = True
                         else:
                             sql_filter += f" and {db_column} LIKE ?".format(db_column=db_column)
                             sql_filter_params.append(f"%{term}%")
                             part_handled = True
- 
+
                 if not part_handled:
                     generic_filter = " OR ".join([f"{col} LIKE ?" for col in column_mapping.values()])
                     sql_filter += f" and ({generic_filter})"
@@ -229,18 +230,20 @@ def get_overview():
             " from genomes"
             " where 1"
         )).fetchall()[0][0]
-   
+        cur.execute("SELECT * FROM genomes LIMIT 0")
+        columnnames = [desc[0] for desc in cur.description]
+        print(columnnames, file=sys.stderr, flush=True)
         sql_query = ''.join([
             "select count(id) from (",
             "select * from genomes left join genomes_cached on genomes.id=genomes_cached.genome_id",
             " where 1",
-            f" and {sql_filter}" if sql_filter != "" else "",            
+            f" and {sql_filter}" if sql_filter != "" else "",
             ")"
         ])
 
         current_app.logger.info(f"Final SQL Query: {sql_query}")
         current_app.logger.info(f"SQL Parameters: {sql_filter_params}")
- 
+
         # fetch total records (filtered)
         result["recordsFiltered"] = cur.execute("".join([
             "select count(id) from ("
@@ -250,7 +253,7 @@ def get_overview():
                 " group by genomes.id",
             ")"
         ]), tuple([*sql_filter_params])).fetchall()[0][0]
-        
+
         result["data"] = []
 
         query_result = pd.read_sql_query("".join([
@@ -260,14 +263,14 @@ def get_overview():
             "genomes.genome_gtdb_phylum, genomes.genome_gtdb_genus, genomes.genome_gtdb_species,  ",
             "genomes.genome_mash_species, genomes.is_cleaned_up, genomes.orig_identifier, genomes.genome_assembly_grade,  ",
             "genomes_cached.genome_id, genomes_cached.num_cds, genomes_cached.num_bgcs, genomes_cached.id_bgcs, genomes_cached.num_bgcs_mibig, ",
-            "genomes_cached.name_bgcs_mibig, genomes_cached.id_bgcs_mibig, genomes_cached.genome_name, genomes_cached.genomes_known_bgcs ", 
-            "FROM genomes ", 
+            "genomes_cached.name_bgcs_mibig, genomes_cached.id_bgcs_mibig, genomes_cached.genome_name, genomes_cached.genomes_known_bgcs ",
+            "FROM genomes ",
             "LEFT JOIN genomes_cached on genomes.id=genomes_cached.genome_id ",
             "WHERE 1=1 ",
             (f" AND {sql_filter}" if sql_filter != "" else ""),
             " ORDER BY  genomes.id",
           " LIMIT ? OFFSET ?"
-        ]), con, params=tuple([*sql_filter_params, *[limit, offset]])) 
+        ]), con, params=tuple([*sql_filter_params, *[limit, offset]]))
 
         for idx, row in query_result.iterrows():
             result["data"].append([

@@ -380,16 +380,12 @@
                                 {
                                   "targets": 10,
                                   render: function(data, type, row, meta) {
-                                    let [mibig_id, mibig_name, mibig_pct, cb_cutoff] = data;
+                                    let [mibig_id, mibig_name, similarity_confidence, cb_cutoff] = data;
                                     let html_text = "n/a";
 
                                     if (mibig_id > -1) {
-                                      html_text = "<a href='https://mibig.secondarymetabolites.org/repository/BGC" + String(mibig_id).padStart(7, '0') + "'>" + mibig_name + "</a>" + " (" + mibig_pct + "%)";
-                                      if (mibig_pct >= cb_cutoff) {
-                                        html_text = "<strong style='color: #222266;'>" + html_text + "</strong>";
-                                      } else {
-                                        html_text = "<i style='color: #999999;'>" + html_text + "</i>";
-                                      }
+                                      html_text = "<a href='https://mibig.secondarymetabolites.org/repository/BGC" + String(mibig_id).padStart(7, '0') + "'>" + mibig_name + "</a>" + " (" + similarity_confidence + " confidence)";
+                                      html_text = "<strong style='color: #222266;'>" + html_text + "</strong>";
                                     }
 
                                     return html_text;

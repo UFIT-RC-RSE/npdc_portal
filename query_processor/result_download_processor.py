@@ -1,14 +1,23 @@
 import glob
-from os import path, remove, getpid
+from os import path, remove, getpid, getenv
 from sqlite3 import connect
 from sys import argv
+import sys
 import subprocess
 from multiprocessing import Pool, cpu_count
 from time import sleep
 from zipfile import ZipFile
 from tempfile import TemporaryDirectory
 import pandas as pd
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout),
+              logging.StreamHandler(sys.stderr)
+              ]
+)
 
 def main():
 
@@ -30,11 +39,11 @@ def main():
         if len(argv) > 2:
             use_srun = int(argv[2]) == 1
 
-        print("workers are running...")
+        logging.info("workers are running...")
         while(True):
             pending = sorted(glob.glob(path.join(tmp_download_folder, "blast-*.zip.pending")), key = path.getmtime)
             if len(pending) > 0:
-                print("deploying {} jobs...".format(
+                logging.info("deploying {} jobs...".format(
                     len(pending)
                 ))
                 pool.map_async(fire_worker, [(use_srun, path.abspath(fp)) for fp in pending])
@@ -250,7 +259,7 @@ def main():
                 zipped.write(out_blast, "blast_tabular_result.txt")
 
         if error_:
-            print("ERROR processing " + zip_output_file)
+            logging.error("ERROR processing " + zip_output_file)
             remove(zip_output_file)
             remove(pending_file + ".locked")
             return 1
@@ -264,7 +273,7 @@ def main():
 
 def fire_worker(tup):
     use_srun, fp = tup
-    print("processing " + fp)
+    logging.info("processing " + fp)
     try:
         subprocess.check_output("{}python {} {}".format(
             "srun -c 1 -n 1 --mem=8G -t 25 " if use_srun else "",
@@ -272,7 +281,7 @@ def fire_worker(tup):
             fp
         ), shell=True)
     except subprocess.CalledProcessError as e:
-        print(e.output)
+        logging.error(e.output)
 
 
 def fetch_pool(num_threads: int):
