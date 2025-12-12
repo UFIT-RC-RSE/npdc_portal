@@ -369,4 +369,4 @@ def get_overview():
                 [comment for comment in row["comment"].split(";") if comment != ""],
             ])
 
-    return result(base)
+    return result

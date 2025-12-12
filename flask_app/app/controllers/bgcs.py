@@ -356,4 +356,4 @@ def get_overview():
                 (row["mibig_hit_id"], row["mibig_hit_name"], row["mibig_hit_confidence"], row['mibig_hit_display'], conf["knowncb_cutoff"])
             ])
 
-    return result(base)
+    return result
