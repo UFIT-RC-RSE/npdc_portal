@@ -63,7 +63,7 @@ LEFT JOIN (
   group_concat(mibig.id, '|') as id_bgcs_mibig
  FROM bgc_mibig_hit
  LEFT JOIN mibig ON bgc_mibig_hit.mibig_id=mibig.id
- LEFT JOIN bgcs ON bgc_mibig_hit.bgc_id=bgcs.id WHERE bgc_mibig_hit.hit_pct >= --knowncb_cutoff-- GROUP BY genome_id
+ LEFT JOIN bgcs ON bgc_mibig_hit.bgc_id=bgcs.id GROUP BY genome_id
 ) AS bgcs_mibig_count ON bgcs_mibig_count.genome_id=genomes.id
 ;
 
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS "genomes_mibig_map_cached" (
 
 INSERT INTO genomes_mibig_map_cached (genome_id, mibig_id)
 SELECT genome_id, mibig_id FROM bgc_mibig_hit
-LEFT JOIN bgcs ON bgcs.id=bgc_mibig_hit.bgc_id WHERE bgc_mibig_hit.hit_pct >= --knowncb_cutoff-- GROUP BY genome_id, mibig_id
+LEFT JOIN bgcs ON bgcs.id=bgc_mibig_hit.bgc_id GROUP BY genome_id, mibig_id
 ;
 
 CREATE INDEX IF NOT EXISTS genomes_mibig_map_cached_genome_id ON genomes_mibig_map_cached(genome_id);
@@ -116,10 +116,10 @@ CREATE TABLE IF NOT EXISTS "bgcs_cached" (
  "num_cds" INTEGER NOT NULL,
  "mibig_hit_id" INTEGER NOT NULL,
  "mibig_hit_name" TEXT NOT NULL,
- "mibig_hit_pct" REAL NOT NULL
+ "mibig_hit_confidence" TEXT NOT NULL
 );
 
-INSERT INTO bgcs_cached (bgc_id, npdc_id, genus, species, mash_species, id_class, name_class, num_cds, mibig_hit_id, mibig_hit_name, mibig_hit_pct)
+INSERT INTO bgcs_cached (bgc_id, npdc_id, genus, species, mash_species, id_class, name_class, num_cds, mibig_hit_id, mibig_hit_name, mibig_hit_confidence)
 SELECT bgcs.id as bgc_id,
 IFNULL(genomes.npdc_id, -1) as npdc_id,
 IFNULL(genomes.genome_gtdb_genus, "") as genus,
@@ -130,7 +130,7 @@ IFNULL(bgc_classes.name_class, "") as name_class,
 IFNULL(cds_count.num_cds, 0) as num_cds,
 IFNULL(bgc_mibig_hit.mibig_id, -1) as mibig_hit_id,
 IFNULL(mibig.name, "") as mibig_hit_name,
-IFNULL(bgc_mibig_hit.hit_pct, -1) as mibig_hit_pct
+IFNULL(bgc_mibig_hit.similarity_confidence, -1) as mibig_hit_confidence
 FROM bgcs
 LEFT JOIN genomes ON genomes.id=bgcs.genome_id
 LEFT JOIN (
@@ -153,7 +153,7 @@ CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_mash_species ON bgcs_cached(mash_spec
 CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_num_cds ON bgcs_cached(num_cds);
 CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_mibig_hit_id ON bgcs_cached(mibig_hit_id);
 CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_mibig_hit_name ON bgcs_cached(mibig_hit_name);
-CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_mibig_hit_pct ON bgcs_cached(mibig_hit_pct);
+CREATE INDEX IF NOT EXISTS bgcs_cached_bgc_mibig_hit_confidence ON bgcs_cached(mibig_hit_confidence);
 
 -- -------------------------------------------------------------
 

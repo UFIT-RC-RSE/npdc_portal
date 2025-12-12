@@ -24,7 +24,7 @@ def page_bgcs():
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # page title
     page_title = "Biosynthetic Gene Clusters"
     page_subtitle = (
@@ -60,7 +60,7 @@ def page_bgcs_detail(bgc_id):
         bgc_data = bgc_data.to_dict()
         bgc_data["name"] = get_bgc_name(bgc_data)
         bgc_data["strain_name"] = get_strain_name(bgc_data)
-        bgc_data["annotation_tool"] = "antiSMASH v5.1.1"
+        bgc_data["annotation_tool"] = "antiSMASH v8.0.4"
         bgc_data["knowncb_cutoff"] = conf["knowncb_cutoff"]
         bgc_data["num_related_bgcs"] = pd.read_sql_query((
             "select count(id) from bgcs"
@@ -116,7 +116,7 @@ def page_bgcs_download(bgc_id):
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # check if bgc_id exists
     try:
         bgc_data = pd.read_sql_query((
@@ -286,7 +286,7 @@ def get_overview():
                             sql_filter += f" and {db_column} LIKE ?".format(db_column=db_column)
                             sql_filter_params.append(f"%{term}%")
                             part_handled = True
-                        
+
                 if not part_handled:
                     generic_filter = " OR ".join([f"{col} LIKE ?" for col in column_mapping.values()])
                     sql_filter += f" and ({generic_filter})"
@@ -308,10 +308,10 @@ def get_overview():
             " GROUP BY bgcs.id",
             ")"
         ])
-            
+
         current_app.logger.info(f"Final SQL Query: {sql_query}")
         current_app.logger.info(f"SQL Parameters: {sql_filter_params}")
-        
+
         # fetch total records (filtered)
         result["recordsFiltered"] = len(cur.execute("".join([
             "select bgcs.*, bgcs_cached.*",
@@ -319,22 +319,22 @@ def get_overview():
             " where 1",
             (" and " + sql_filter) if sql_filter != "" else "",
         ]), tuple([*sql_filter_params])).fetchall())
-        
+
         result["data"] = []
-        
+
         query_result = pd.read_sql_query("".join([
-             "SELECT bgcs.id, bgcs.genome_id, bgcs.contig_num, bgcs.region_num, ",  
-             "bgcs.nt_start, bgcs.nt_end, bgcs.fragmented, bgcs.gcf, bgcs.orig_identifier, bgcs.bgc_size_kb, bgcs.fragmented_status, ",  
-             "bgcs_cached.bgc_id, bgcs_cached.npdc_id, bgcs_cached.genus, bgcs_cached.species, ",  
-             "bgcs_cached.mash_species, bgcs_cached.id_class, bgcs_cached.name_class, ", 
+             "SELECT bgcs.id, bgcs.genome_id, bgcs.contig_num, bgcs.region_num, ",
+             "bgcs.nt_start, bgcs.nt_end, bgcs.fragmented, bgcs.gcf, bgcs.orig_identifier, bgcs.bgc_size_kb, bgcs.fragmented_status, ",
+             "bgcs_cached.bgc_id, bgcs_cached.npdc_id, bgcs_cached.genus, bgcs_cached.species, ",
+             "bgcs_cached.mash_species, bgcs_cached.id_class, bgcs_cached.name_class, ",
              "bgcs_cached.num_cds, bgcs_cached.mibig_hit_id, bgcs_cached.mibig_hit_name, ",
-             " bgcs_cached.mibig_hit_pct, bgcs_cached.bgc_name, bgcs_cached.bgc_region_contig, bgcs_cached.mibig_hit_display  ",  
+             " bgcs_cached.mibig_hit_confidence, bgcs_cached.bgc_name, bgcs_cached.bgc_region_contig, bgcs_cached.mibig_hit_display  ",
              "FROM bgcs ",
-             "LEFT JOIN bgcs_cached ON bgcs.id = bgcs_cached.bgc_id ", 
-             "WHERE 1=1 ",  
-             (f" AND {sql_filter}" if sql_filter != "" else ""),  
-             " ORDER BY bgcs.contig_num, bgcs.nt_start ASC ", 
-             " LIMIT ? OFFSET ?"  
+             "LEFT JOIN bgcs_cached ON bgcs.id = bgcs_cached.bgc_id ",
+             "WHERE 1=1 ",
+             (f" AND {sql_filter}" if sql_filter != "" else ""),
+             " ORDER BY bgcs.contig_num, bgcs.nt_start ASC ",
+             " LIMIT ? OFFSET ?"
         ]), con, params=tuple([*sql_filter_params, limit, offset]))
 
         for idx, row in query_result.iterrows():
@@ -353,7 +353,7 @@ def get_overview():
                 # (row["nt_end"] - row["nt_start"]) / 1000,
                 row["bgc_size_kb"],
                 row["num_cds"],
-                (row["mibig_hit_id"], row["mibig_hit_name"], row["mibig_hit_pct"], row['mibig_hit_display'], conf["knowncb_cutoff"])
+                (row["mibig_hit_id"], row["mibig_hit_name"], row["mibig_hit_confidence"], row['mibig_hit_display'], conf["knowncb_cutoff"])
             ])
 
-    return result
+    return result(base)

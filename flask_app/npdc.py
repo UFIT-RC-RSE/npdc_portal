@@ -22,7 +22,6 @@ from app.controllers import feedback, about, query
 from app.controllers import dashboard
 
 def portal():
-
     # check accounts db
     if not path.exists(conf["user_db_path"]):
         print("database not up-to-date, please run init_db.py first!!")
@@ -70,7 +69,7 @@ def portal():
     # load in application environment configurations
     for key, val in npdc_conf.items():
         app.config[key] = val
-    
+
     # register controllers
     app.register_blueprint(root.blueprint)
     app.register_blueprint(login.blueprint)

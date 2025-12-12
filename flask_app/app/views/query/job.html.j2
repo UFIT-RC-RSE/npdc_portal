@@ -233,7 +233,7 @@
                                 let prot_name = $(this).next(".form-check-label").text();
                                 if (prot_id != "0") {
                                   modal_content += "<div class='row text-center m-2'>";
-                                  modal_content += "<div class='col'>" + 
+                                  modal_content += "<div class='col'>" +
                                     "<button class='btn btn-primary btn_download_blast_hits' protid='" +
                                      prot_id +
                                      "'>" + prot_name + "</button>" +
@@ -335,7 +335,7 @@
                     render: function(data, type, row, meta) {
                       return data.toFixed(1) + "%";
                     }
-                  },                  
+                  },
                   {
                     targets: 1,
                     render: function(data, type, row, meta) {
@@ -448,7 +448,7 @@
                     render: function(data, type, row, meta) {
                       let [bgc_id, npdc_id, contig_num, region_name] = data;
                       let bgc_num = parseInt(region_name.split("region")[1], 10);
-                      let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                      
+                      let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;
                       return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                     }
                   },
@@ -484,16 +484,12 @@
                   {
                     "targets": 11,
                     render: function(data, type, row, meta) {
-                      let [mibig_id, mibig_name, mibig_pct, cb_cutoff] = data;
+                      let [mibig_id, mibig_name, mibig_conf, cb_cutoff] = data;
                       let html_text = "n/a";
 
                       if (mibig_id > -1) {
-                        html_text = "<a href='https://mibig.secondarymetabolites.org/repository/BGC" + String(mibig_id).padStart(7, '0') + "'>" + mibig_name + "</a>" + " (" + mibig_pct + "%)";
-                        if (mibig_pct >= cb_cutoff) {
-                          html_text = "<strong style='color: #222266;'>" + html_text + "</strong>";
-                        } else {
-                          html_text = "<i style='color: #999999;'>" + html_text + "</i>";
-                        }
+                        html_text = "<a href='https://mibig.secondarymetabolites.org/repository/BGC" + String(mibig_id).padStart(7, '0') + "'>" + mibig_name + "</a>" + " (" + mibig_conf + " confidence)";
+                        html_text = "<strong style='color: #222266;'>" + html_text + "</strong>";
                       }
 
                       return html_text;
@@ -658,7 +654,7 @@
                     Array.from(new Set(response["name_class"][i].split("|"))).sort(),
                     ((response["nt_end"][i] - response["nt_start"][i]) / 1000).toFixed(0),
                     response["num_cds"][i],
-                    [response["mibig_hit_id"][i], response["mibig_hit_name"][i], response["mibig_hit_pct"][i], response["knowncb_cutoff"][i]]
+                    [response["mibig_hit_id"][i], response["mibig_hit_name"][i], response["mibig_hit_confidence"][i], response["knowncb_cutoff"][i]]
                   ]);
                 });
                 break;
@@ -668,7 +664,7 @@
             } else {
               $(".blast_result_download_btn").removeClass("disabled");
             }
-            
+
             $("#section_results_by_" + show_result + "_summary").html(summary_content);
             $("#section_results_by_" + show_result + "_table").DataTable().rows.add(datatable_data).draw();
             $("#section_results_by_genome_summary").removeClass("alert-warning");

@@ -126,13 +126,13 @@ CREATE INDEX IF NOT EXISTS mibig_name_dereplicated ON mibig(name_dereplicated);
 CREATE TABLE IF NOT EXISTS "bgc_mibig_hit" (
  bgc_id INTEGER NOT NULL,
  mibig_id INTEGER NOT NULL,
- hit_pct REAL NOT NULL,
+ similarity_confidence REAL NOT NULL,
  FOREIGN KEY("bgc_id") REFERENCES bgc("id"),
  FOREIGN KEY("mibig_id") REFERENCES mibig("id")
 );
 CREATE INDEX IF NOT EXISTS bgc_mibig_hit_bgc_id ON bgc_mibig_hit(bgc_id);
 CREATE INDEX IF NOT EXISTS bgc_mibig_hit_mibig_id ON bgc_mibig_hit(mibig_id);
-CREATE INDEX IF NOT EXISTS bgc_mibig_hit_hit_pct ON bgc_mibig_hit(hit_pct);
+CREATE INDEX IF NOT EXISTS bgc_mibig_hit_hit_pct ON bgc_mibig_hit(similarity_confidence);
 
 CREATE TABLE IF NOT EXISTS "cds" (
  "id" INTEGER PRIMARY KEY AUTOINCREMENT,

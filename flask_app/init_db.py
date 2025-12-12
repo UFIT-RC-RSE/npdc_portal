@@ -61,6 +61,8 @@ if __name__ == "__main__":
                 generate_new_cache = True
         if generate_new_cache:
             print("generating cache tables...")
+            print("Source db:")
+            print(path.join(path.dirname(path.dirname(path.realpath(__file__))), "sql_schemas", "sql_schema_db_cache.txt"))
             cur.executescript(
                 open(
                     path.join(path.dirname(path.dirname(path.realpath(__file__))), "sql_schemas", "sql_schema_db_cache.txt")

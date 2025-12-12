@@ -31,7 +31,7 @@ def page_main():
 
     # if submitting a job
     if request.method == 'POST':
-        
+
         # validate and parse input sequences
         input_validated, input_proteins = parse_input_prots(request.form["protsequences"])
 
@@ -56,7 +56,7 @@ def page_main():
 
         # redirect to the job's page
         return redirect(url_for("query.page_job", job_id=job_id))
-        
+
     # page title
     page_title = "BLAST Query"
     page_subtitle = ("")
@@ -121,7 +121,7 @@ def parse_input_prots(prot_seq):
     for line in prot_seq.split("\n"):
         line = line.rstrip("\r")
         if line.startswith(">"):
-            if name != "":                
+            if name != "":
                 if name in results: # double naming
                     return False, "duplicated protein ids"
                 if re.fullmatch(r"([ABCDEFGHIKLMNPQRSTUVWYZX\*-]+)", seq) == None:
@@ -208,7 +208,7 @@ def get_list():
 
 
 def submit_new_job(user_id, input_proteins):
-    
+
     with sqlite3.connect(conf["query_db_path"], timeout=60) as con:
 
         # submit job and get the new id back
@@ -288,7 +288,7 @@ def get_results_list():
 
             result = pd.read_sql_query((sql_query["q"]), con, params=sql_query["p"])
             result["grade"] = result.apply(get_assembly_grade, axis=1) if result.shape[0] > 0 else []
-            result = {col: vals.tolist() for col, vals in result.iteritems()}
+            result = {col: vals.tolist() for col, vals in result.items()}
 
         elif type_req == "bgc":
             sql_query = {
@@ -314,7 +314,7 @@ def get_results_list():
 
             result = pd.read_sql_query((sql_query["q"]), con, params=sql_query["p"])
             result["knowncb_cutoff"] = conf["knowncb_cutoff"]
-            result = {col: vals.tolist() for col, vals in result.iteritems()}
+            result = {col: vals.tolist() for col, vals in result.items()}
         else:
             result = ""
 
@@ -356,7 +356,7 @@ def page_download_result(job_id):
         return "free"
 
     # build output filename
-    file_type = request.args.get("filetype", type=str)    
+    file_type = request.args.get("filetype", type=str)
     if file_type in ["fasta_proteins", "blast_table"]:
         query_prot_id = request.args.get("query_prot_id", type=str)
         if not query_prot_id:
@@ -386,7 +386,7 @@ def page_download_result(job_id):
                 return "processed"
 
     elif action == "download":
-        
+
         # check if on cooldown
         if job_data["last_result_downloaded"] != "":
             sec_since_last_download = (

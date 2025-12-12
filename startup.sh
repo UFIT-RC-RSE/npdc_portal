@@ -2,7 +2,7 @@
 #
 # ==============================================================================
 # Script Name: startup.sh
-# Description: This script starts the environment-specific deployment of the    
+# Description: This script starts the environment-specific deployment of the
 #              NPDC portal. 'runner.py' manages the workers for the
 #              webserver, blastserver, etc.
 #
@@ -29,6 +29,8 @@ else
 fi
 
 # loaded environment; starting runner
+echo "starting init_db.py and init_db.searchable.py"
+python ./flask_app/init_db.py
+python ./flask_app/init_db_searchable.py
 echo "Starting NPDC runner - ($NPDC_ENV)..."
-
 python ./runner/runner.py

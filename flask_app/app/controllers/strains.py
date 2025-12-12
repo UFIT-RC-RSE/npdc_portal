@@ -28,7 +28,7 @@ def page_strains():
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # page title
     page_title = "Strain Collection"
     page_subtitle = (
@@ -49,7 +49,7 @@ def page_strains_ordering():
     # check login
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
-        
+
     # page title
     page_title = "Request a strain"
     page_subtitle = (
@@ -118,27 +118,27 @@ def page_strains_detail(npdc_id):
             strain_data["mibig_hits"] = pd.read_sql_query((
                 "select count(id)"
                 " from bgcs inner join bgc_mibig_hit on bgcs.id=bgc_mibig_hit.bgc_id"
-                " where bgcs.genome_id=? and bgc_mibig_hit.hit_pct >= ?"
-            ),  con, params=(int(strain_data["genome_id"]), conf["knowncb_cutoff"])).iloc[0, 0]
+                " where bgcs.genome_id=?"
+            ),  con, params=[strain_data["genome_id"]]).iloc[0, 0]
             strain_data["genome_quality"] = get_assembly_grade(strain_data)
         else:
             strain_data["complete_bgcs"] = ""
             strain_data["fragmented_bgcs"] = ""
             strain_data["mibig_hits"] = ""
             strain_data["genome_quality"] = ""
-    
+
         strain_data["name"] = get_strain_name(strain_data)
 
         if strain_data["collection_date"] != "":
             strain_data["collection_date"] = datetime.strftime(
                 datetime.strptime(strain_data["collection_date"], "%Y-%m-%d"), "%B %-m, %Y"
             )
-        
+
         try:
             strain_data["ecology"] = [comment.split("found in '")[1].rstrip("'") for comment in strain_data["comment"].split(";") if comment.lstrip().startswith("found in '")]
         except:
             strain_data["ecology"] = []
-            
+
         strain_data["picture_available"] = path.exists(path.join(conf["strain_pictures_folder_path"], "{}.jpg".format(strain_data["npdc_id"])))
 
         strain_data = strain_data.replace("", "n/a").to_dict()
@@ -236,7 +236,7 @@ def get_overview():
     # Column mapping
     column_mapping = {
         "NPDC No.": "strains.npdc_id",
-        "Taxonomy": "strain_name",        
+        "Taxonomy": "strain_name",
         "Collection date": "collection_date",
         "Genome available": "strains.genome_available",
         "Collection place": "collection_country",
@@ -286,7 +286,7 @@ def get_overview():
                                 sql_filter_params.extend([start_date_str, end_date_str])
                                 part_handled = True
                             else:
-                               continue   
+                               continue
                         elif db_column == "strains.genome_available":
                             term_normalized = term.strip().capitalize()
                             if term_normalized in ["Yes", "No"]:
@@ -307,7 +307,7 @@ def get_overview():
                     generic_filter = " OR ".join([f"{col} LIKE ?" for col in column_mapping.values()])
                     sql_filter += f" and ({generic_filter})"
                     sql_filter_params.extend([f"%{part}%"] * len(column_mapping))
-  
+
         # fetch total records
         result["recordsTotal"] = cur.execute((
             "select count(npdc_id)"
@@ -323,7 +323,7 @@ def get_overview():
             (f"AND {sql_filter} " if sql_filter != "1" else ""),
         ])
 
-        # Log the constructed query for debugging 
+        # Log the constructed query for debugging
         current_app.logger.info(f"Final SQL Query: {sql_query}")
         current_app.logger.info(f"SQL Parameters: {sql_filter_params}")
 
@@ -335,11 +335,11 @@ def get_overview():
             "WHERE 1=1 ",
             (f"AND {sql_filter} " if sql_filter != "1" else ""),
         ]), tuple([*sql_filter_params])).fetchall()[0][0]
- 
+
         result["data"] = []
- 
+
         query_result = pd.read_sql_query("".join([
-            "select genomes.id AS genome_id, ", 
+            "select genomes.id AS genome_id, ",
             "genomes.genome_gtdb_species, genomes.genome_gtdb_genus, ",
             "strains.npdc_id, strains.collection_date, strains.collection_country, ",
             "strains.collection_region, strains.empirical_category, strains.empirical_genus, ",
@@ -355,7 +355,7 @@ def get_overview():
             "LIMIT ? OFFSET ?",
         ]), con, params=tuple([*sql_filter_params, limit, offset])).fillna("")
 
-        query_result = query_result.loc[:,~query_result.columns.duplicated()] 
+        query_result = query_result.loc[:,~query_result.columns.duplicated()]
         for idx, row in query_result.iterrows():
             taxonomy = ""
             result["data"].append([
@@ -369,4 +369,4 @@ def get_overview():
                 [comment for comment in row["comment"].split(";") if comment != ""],
             ])
 
-    return result
+    return result(base)
