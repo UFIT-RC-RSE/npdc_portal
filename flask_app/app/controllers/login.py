@@ -8,8 +8,10 @@ import string
 import random
 from datetime import datetime
 import os
+import requests
 
 RECAPTCHA_SITE_KEY = os.getenv('RECAPTCHA_SITE_KEY')
+RECAPTCHA_SECRET_KEY = os.getenv('RECAPTCHA_SECRET_KEY')
 
 def generate_token(size):
     chars = list(set(string.ascii_uppercase + string.digits).difference('LIO01'))
@@ -22,12 +24,39 @@ from ..config import conf
 from flask import Blueprint
 blueprint = Blueprint('login', __name__)
 
+def verify_captcha(token: str) -> bool:
+    """
+    Verifies the captcha response from the form submission for both login / register.
+
+    Args:
+      token: Captcha response token from request.form
+
+    Returns:
+      bool of success / failure
+    """
+    payload = {
+        "secret": RECAPTCHA_SECRET_KEY,
+        "response": token
+    }
+
+    req_response = requests.post(
+        "https://www.google.com/recaptcha/api/siteverify",
+        data=payload
+    )
+
+    return req_response.json().get("success", False)
+
 
 @blueprint.route("/login", methods=['POST', 'GET'])
 def page_login():
-
     # if logging in
-    if request.method == 'POST':        
+    if request.method == 'POST':
+        captcha_response = request.form.get("g-recaptcha-response")
+
+        if not verify_captcha(captcha_response):
+            flash("Invalid reCAPTCHA.")
+            return redirect("/login")
+
         with sqlite3.connect(conf["user_db_path"]) as con:
             cur_userdata =  pd.read_sql_query((
                 "select *"
@@ -70,9 +99,12 @@ def page_login():
 
 @blueprint.route("/register", methods=['POST'])
 def page_register():
+    captcha_response = request.form.get("g-recaptcha-response")
+    if not verify_captcha(captcha_response):
+        flash("Invalid reCAPTCHA.")
+        return redirect("/login")
 
     with sqlite3.connect(conf["user_db_path"]) as con:
-
 
         # validations
         validation_messages = []
