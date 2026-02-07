@@ -6,7 +6,9 @@
   <div class="row">
     <div class="col">
       <div class="alert alert-info">
-        <strong>Using the search bar:</strong><br>The general format of a search query is: &lt;query&gt;[&lt;column name&gt;]<br>For example, Streptomyces[Taxonomy] will query the Taxonomy column for the word Streptomyces.<br>Filter more than one column by using "and".<br>For example, searching both Taxonomy and Num. of genes would look like this: Streptomyces[Taxonomy] and 10[Num. of genes]<br>The NPDC No., GC content, Num. of BGCs, and Known BGC hits columns only accept numerical entries. Do not include "NPDC-" or "%" in your search.<br>Numerical searching allows filtering for a range of numbers using - and to filter with &lt; and &gt;<br>For example, filtering the Num. of BGCs could look like: 2-5[Num. of BGCs], &lt;6[Num. of BGCs], or &gt;3[Num. of BGCs]<br>The Assembly quality column only accepts “high”, “good”, “fair”, or “fragmented”.
+        <strong>Using the search bar:</strong><br>The general format of a search query is: &lt;query&gt;[&lt;column name&gt;]<br>For example, Streptomyces[Taxonomy] will query the Taxonomy column for the word Streptomyces.<br>Filter more than one column by using "and".<br>For example, searching both Taxonomy and Num. of genes would look like this: Streptomyces[Taxonomy] and 10[Num. of genes]<br>The NPDC No., GC content, Num. of BGCs, and Known BGC hits columns only accept numerical entries. Do not include "NPDC-" or "%" in your search.<br>Numerical searching allows filtering for a range of numbers using - and to filter with &lt; and &gt;<br>For example, filtering the Num. of BGCs could look like: 2-5[Num. of BGCs], &lt;6[Num. of BGCs], or &gt;3[Num. of BGCs]
+        <br>The Assembly quality column only accepts “high”, “good”, “fair”, or “fragmented”.
+        <br>The full NCBI RefSeq ID can be used as well (e.g. GCF_040302065.1)
       </div>
     </div>
   </div>
@@ -99,7 +101,8 @@
             targets: 0,
             render: function(data, type, row, meta) {
               let [genome_id, npdc_id] = data
-              return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">NPDC-" + npdc_id + "</button></a>";
+              let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+              return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + prefix + "-" + npdc_id + "</button></a>";
             }
           },
           {

@@ -1,5 +1,5 @@
 import glob
-from os import path, remove, getpid, getenv
+from os import path, remove, getpid
 from sqlite3 import connect
 from sys import argv
 import sys
@@ -30,6 +30,7 @@ def main():
     npdc_db = path.join(instance_folder, "db_data", "npdc_portal.db")
     jobs_db = path.join(instance_folder, "queries.db")
     cds_fasta_path = path.join(instance_folder, "db_data", "npdc_portal.fasta")
+    refseq_ids = path.join(instance_folder, "db_data", "ncbi_ids.tsv")
 
 
     if argv[1].isnumeric(): # deployer mode
@@ -58,8 +59,11 @@ def main():
             pending_file,
             pending_file + ".locked"
         ), shell=True)
-        _, job_id, file_type, query_prot_ids = path.basename(pending_file).split(".zip")[0].split("-")
+        _, job_id, file_type, query_prot_ids, refseq = path.basename(pending_file).split(".zip")[0].split("-")
         job_id = int(job_id)
+        if refseq=="1":
+            cds_fasta_path=cds_fasta_path.replace('npdc_portal.fasta', 'npdc_portal_refseq.fasta')
+            npdc_db = npdc_db.replace("npdc_portal.db", "npdc_portal_searchable_refseq.db")
         query_prot_ids = [int(prot_id) for prot_id in query_prot_ids.split(",")]
         zip_output_file = pending_file.rsplit(".pending", 1)[0]
         zipped = ZipFile(zip_output_file, "w")
@@ -157,6 +161,10 @@ def main():
                         row["contig"],
                         row["bgc"]
                     ), axis=1)
+                    refseq_ids=pd.read_csv(refseq_ids, sep='\t')
+                    refseq_ids['ncbi_id']=refseq_ids['ncbi_id'].fillna('NA')
+                    df_ = df_.merge(refseq_ids, on='npdc_id', how='left')
+                    df_['ncbi_id']=df_['ncbi_id'].fillna('NA')
                     df_.to_csv(out_cyto, sep="\t", index=False)
                     zipped.write(out_cyto, "metadata.tsv")
 
@@ -247,6 +255,10 @@ def main():
                         )
                         with open(out_blast, "a") as fp:
                             fp.write("\n")
+                        refseq_ids=pd.read_csv(refseq_ids, sep='\t')
+                        refseq_ids['ncbi_id']=refseq_ids['ncbi_id'].fillna('NA')
+                        df_ = df_.merge(refseq_ids, on='npdc_id', how='left')
+                        df_['ncbi_id']=df_['ncbi_id'].fillna('NA')
 
                         out_blast_metadata = path.join(temp_dir, "metadata_{}.txt".format(prot_name))
                         df_.loc[

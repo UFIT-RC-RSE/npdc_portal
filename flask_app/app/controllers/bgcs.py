@@ -8,7 +8,7 @@ from datetime import datetime
 import re
 
 # import global config
-from ..config import conf
+from ..config import conf, get_npdc_db_path
 from ..session import check_logged_in
 
 # set blueprint object
@@ -38,7 +38,6 @@ def page_bgcs():
         page_subtitle=page_subtitle
     )
 
-
 @blueprint.route("/bgcs/view/<int:bgc_id>")
 def page_bgcs_detail(bgc_id):
 
@@ -46,11 +45,11 @@ def page_bgcs_detail(bgc_id):
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
 
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         bgc_data = pd.read_sql_query((
             "select * from bgcs left join bgcs_cached on bgcs.id=bgcs_cached.bgc_id"
             " where bgc_id=?"
-        ), sqlite3.connect(conf["db_path"]), params=(bgc_id, ))
+        ), sqlite3.connect(get_npdc_db_path(session)), params=(bgc_id, ))
 
         if bgc_data.shape[0] < 1:
             flash("can't find bgc id", "alert-danger")
@@ -65,8 +64,7 @@ def page_bgcs_detail(bgc_id):
         bgc_data["num_related_bgcs"] = pd.read_sql_query((
             "select count(id) from bgcs"
             " where id<>? and gcf=?"
-        ), sqlite3.connect(conf["db_path"]), params=(bgc_data["bgc_id"], bgc_data["gcf"])).iloc[0, 0]
-
+        ), sqlite3.connect(get_npdc_db_path(session)), params=(bgc_data["bgc_id"], bgc_data["gcf"])).iloc[0, 0]
     page_title = bgc_data["name"]
 
     # render view
@@ -76,9 +74,7 @@ def page_bgcs_detail(bgc_id):
         page_title=page_title
     )
 
-
 def get_strain_name(data):
-
     result = "Unknown bacterium"
     if data["species"] != "":
         result = data["species"]
@@ -86,7 +82,6 @@ def get_strain_name(data):
         result = data["genus"] + " spp."
 
     return result
-
 
 def get_bgc_name(row):
     return "NPDC{:06d}.ctg-{:04d}.region{:03d}".format(
@@ -122,7 +117,7 @@ def page_bgcs_download(bgc_id):
         bgc_data = pd.read_sql_query((
             "select * from bgcs left join bgcs_cached on bgcs.id=bgcs_cached.bgc_id"
             " where bgc_id=?"
-        ), sqlite3.connect(conf["db_path"]), params=(bgc_id, )).iloc[0].to_dict()
+        ), sqlite3.connect(get_npdc_db_path(session)), params=(bgc_id, )).iloc[0].to_dict()
     except:
         flash("can't find bgc id", "alert-danger")
         return redirect(url_for("home.page_home"))
@@ -180,14 +175,13 @@ def page_bgcs_download(bgc_id):
 
     return send_file(bgc_file_path, as_attachment=True, download_name=bgc_file_delivery_name)
 
-
 @blueprint.route("/api/bgc/get_arrower_objects")
 def get_arrower_objects():
     """ for arrower js """
     result = {}
     bgc_ids = map(int, request.args.get('bgc_id', type=str).split(","))
 
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         cur = con.cursor()
 
         for bgc_id in bgc_ids:
@@ -244,7 +238,7 @@ def get_overview():
 
     default_numeric_columns = ["npdc_id", "gcf", "num_cds", "bgc_size_kb"]
 
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         cur = con.cursor()
         sql_filter = "1"
         sql_filter_params = []
@@ -258,6 +252,23 @@ def get_overview():
         if request.args.get("gcf", "") != "":
             sql_filter += " and gcf=?"
             sql_filter_params.append(request.args.get("gcf"))
+        
+        mibig_hit_ids_str=[]
+        search_by_mibig_id=False
+        mibig_ids=pd.read_csv(path.join(path.dirname(get_npdc_db_path(session)), 'mibig_list.tsv'),sep='\t')
+        if (search_value.lower() in list(mibig_ids['name'])):
+            temp=mibig_ids.loc[mibig_ids['name']==search_value.lower()]
+            if len(temp)==1:
+                search_value=str(temp['id'].iloc[0]) + '[MIBiG hit]'
+                search_by_mibig_id=True
+            elif(len(temp)>1):
+                temp['id'] = [str(int(x.replace('BGC',''))) for x in list(temp['id'])]
+                mibig_hit_ids_str = ', '.join([f"'{id}'" for id in list(temp['id'])])
+                search_value=""
+                search_by_mibig_id=True
+                
+        if 'MIBiG hit' in search_value:
+            search_by_mibig_id=True
 
         if search_value:
             is_numeric_search = search_value.replace('.', '', 1).isdigit()
@@ -305,10 +316,11 @@ def get_overview():
             " LEFT JOIN bgcs_cached ON bgcs.id = bgcs_cached.bgc_id",
             " WHERE 1",
             f" AND {sql_filter}" if sql_filter != "" else "",
+            f" AND bgcs_cached.mibig_hit_id IN ({mibig_hit_ids_str}) " if mibig_hit_ids_str != [] else "",
             " GROUP BY bgcs.id",
             ")"
         ])
-
+   
         current_app.logger.info(f"Final SQL Query: {sql_query}")
         current_app.logger.info(f"SQL Parameters: {sql_filter_params}")
 
@@ -318,6 +330,7 @@ def get_overview():
             " from bgcs left join bgcs_cached on bgcs.id=bgcs_cached.bgc_id"
             " where 1",
             (" and " + sql_filter) if sql_filter != "" else "",
+            f" and bgcs_cached.mibig_hit_id in ({mibig_hit_ids_str}) " if mibig_hit_ids_str != [] else "",
         ]), tuple([*sql_filter_params])).fetchall())
 
         result["data"] = []
@@ -332,10 +345,16 @@ def get_overview():
              "FROM bgcs ",
              "LEFT JOIN bgcs_cached ON bgcs.id = bgcs_cached.bgc_id ",
              "WHERE 1=1 ",
-             (f" AND {sql_filter}" if sql_filter != "" else ""),
-             " ORDER BY bgcs.contig_num, bgcs.nt_start ASC ",
+             (f"AND {sql_filter} " if sql_filter != "" else ""),
+             (f"AND bgcs_cached.mibig_hit_id IN ({mibig_hit_ids_str}) " if mibig_hit_ids_str !=[] else ""),
+             " ORDER BY bgcs_cached.npdc_id ",
              " LIMIT ? OFFSET ?"
         ]), con, params=tuple([*sql_filter_params, limit, offset]))
+
+        if search_by_mibig_id:
+            confidence_order = pd.CategoricalDtype(['High', 'Medium', 'Low', '-1'], ordered=True)
+            query_result['mibig_hit_confidence'] = query_result['mibig_hit_confidence'].astype(confidence_order)
+            query_result = query_result.sort_values(by=['mibig_hit_confidence', 'npdc_id'])
 
         for idx, row in query_result.iterrows():
             result["data"].append([

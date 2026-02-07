@@ -332,15 +332,18 @@
                   { className: "text-end", targets: [0, 5, 6, 7] },
                   {
                     targets: 0,
-                    render: function(data, type, row, meta) {
-                      return data.toFixed(1) + "%";
+                    render: function(data) {
+                      const n = Number(data);
+                      return Number.isFinite(n) ? n.toFixed(1) + "%" : "n/a";
                     }
                   },
                   {
                     targets: 1,
                     render: function(data, type, row, meta) {
                       let [genome_id, npdc_id] = data
-                      return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">NPDC-" + npdc_id + "</button></a>";
+                      let prefix = npdc_id >= 200000 ? 'REFSEQ-' : 'NPDC-';
+                      let label = prefix + npdc_id;
+                      return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                     }
                   },
                   {
@@ -351,31 +354,32 @@
                   },
                   {
                     targets: 4,
-                    render: function(data, type, row, meta) {
-                      let html_text = "";
-                      let badge_class = {
-                        "high": "rounded-pill bg-success",
-                        "good": "bg-success",
-                        "fair": "bg-secondary",
-                        "fragmented": "bg-warning"
+                    render: function(data) {
+                      const badge_class = {
+                        high: "rounded-pill bg-success",
+                        good: "bg-success",
+                        fair: "bg-secondary",
+                        fragmented: "bg-warning"
                       };
-                      html_text += "<span class='badge m-1 " + badge_class[data["grade"]] + "'>" + data["grade"] + "</span>";
-                      if (data["cleaned"]) {
-                        html_text += "<span class='badge rounded-pill bg-info m-1'>" + "cleaned-up" + "</span>";
-                      }
-                      return html_text;
+                      const isObj = data && typeof data === "object";
+                      const grade = isObj ? data.grade : data; // allow string or object
+                      const cleaned = isObj && !!data.cleaned;
+                      let html = "<span class='badge m-1 " + (badge_class[grade] || "bg-secondary") + "'>" + (grade || "n/a") + "</span>";
+                      if (cleaned) html += "<span class='badge rounded-pill bg-info m-1'>cleaned-up</span>";
+                      return html;
                     }
                   },
-                  {
-                    targets: 5,
-                    render: function(data, type, row, meta) {
-                      return data.toFixed(1) + " %";
+                    {
+                      targets: 5,
+                      render: function(data) {
+                      const n = Number(data);
+                      return Number.isFinite(n) ? n.toFixed(1) + " %" : "n/a";
                     }
                   },
                   {
                     targets: 7,
-                    render: function(data, type, row, meta) {
-                      return data.length;
+                    render: function(data) {
+                      return Array.isArray(data) ? data.length : Number(data) || 0;
                     }
                   }
                 ]
@@ -433,7 +437,8 @@
                     targets: 1,
                     render: function(data, type, row, meta) {
                       let [genome_id, npdc_id] = data;
-                      let label = "NPDC-" + npdc_id;
+                      let prefix = npdc_id >= 200000 ? 'REFSEQ-' : 'NPDC-';
+                      let label = prefix + npdc_id;
                       return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                     }
                   },
@@ -448,7 +453,8 @@
                     render: function(data, type, row, meta) {
                       let [bgc_id, npdc_id, contig_num, region_name] = data;
                       let bgc_num = parseInt(region_name.split("region")[1], 10);
-                      let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;
+                      let prefix = npdc_id >= 200000 ? 'REFSEQ-' : 'NPDC-';
+                      let label = prefix + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;
                       return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                     }
                   },
@@ -568,7 +574,7 @@
                       count_most_genus_pct = count;
                     }
                   });
-                  count_most_genus_pct = (count_most_genus_pct / count_genome * 100).toFixed(0);
+                  count_most_genus_pct = Math.min((count_most_genus_pct / count_genome * 100), 100).toFixed(0);
                   summary_content = (
                     "Your query is found in <strong>" + count_genome.toLocaleString("en-US") + "</strong> genome(s) of <strong>" + count_species.toLocaleString("en-US") + "</strong> different Mash cluster(s)." +
                     " Most of the genome(s), <strong>" + count_most_genus_pct.toLocaleString("en-US") + "%</strong>, were coming from" +
@@ -622,15 +628,16 @@
                   count_most_class_pct = (count_most_class_pct / count_bgc * 100).toFixed(0);
                   let count_most_genus = "";
                   let count_most_genus_pct = 0;
-                  $.each(response["genus"].reduce(function (acc, curr) {
-                    return acc[curr] ? ++acc[curr] : acc[curr] = 1, acc
-                  }, {}), function(genus, count) {
-                    if ((count > count_most_genus_pct) || (count_most_genus_pct == 0)) {
-                      count_most_genus = genus;
-                      count_most_genus_pct = count;
-                    }
+                  const genusCounts = response["genus"].reduce((acc, g) => {
+                    acc[g] = (acc[g] || 0) + 1;
+                    return acc;
+                  }, {});
+                  let topCount = 0;
+                  $.each(genusCounts, function(genus, count) {
+                    if (count > topCount) { count_most_genus = genus; topCount = count; }
                   });
-                  count_most_genus_pct = (count_most_genus_pct / count_genome * 100).toFixed(0);
+                  const totalBGCs = response["genus"] ? response["genus"].length : 0;
+                  count_most_genus_pct = totalBGCs ? Math.min(100, Math.round((topCount / totalBGCs) * 100)) : 0;
                   summary_content = (
                     "Your query is found in <strong>" + count_bgc.toLocaleString("en-US") + "</strong> BGC(s), forming a total of <strong>" + count_gcf.toLocaleString("en-US") + "</strong> GCF(s)." +
                     " The main biosynthetic class of the BGCs is <strong>" + count_most_class + " (" + count_most_class_pct.toLocaleString("en-US") + "%)</strong>." +
