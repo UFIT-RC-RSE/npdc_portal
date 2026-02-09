@@ -39,10 +39,16 @@ def verify_captcha(token: str) -> bool:
         "response": token
     }
 
-    req_response = requests.post(
-        "https://www.google.com/recaptcha/api/siteverify",
-        data=payload
-    )
+    try:
+        req_response = requests.post(
+            "https://www.google.com/recaptcha/api/siteverify",
+            data=payload,
+            timeout=5
+        )
+    except requests.Timeout:
+        return False
+    except requests.ConnectionError:
+        return False
 
     return req_response.json().get("success", False)
 
