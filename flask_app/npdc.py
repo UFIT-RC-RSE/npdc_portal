@@ -196,6 +196,7 @@ def portal():
     @app.before_request
     def set_default_session_values():
         session.setdefault('diamond_file', 0)
+        session.setdefault('INCLUDE_REFSEQ', INCLUDE_REFSEQ)
     return app
 
 

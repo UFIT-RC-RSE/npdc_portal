@@ -102,7 +102,7 @@ s), x (x genomes), x (x genomes), and x (x genomes).
                   targets: 0,
                   render: function(data, type, row, meta) {
                     let [genome_id, npdc_id] = data;
-                    let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                    let prefix = npdc_id >= 200000 ? 'REFSEQ-' : 'NPDC-';
                     let label = prefix + npdc_id;
                     return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                   }
