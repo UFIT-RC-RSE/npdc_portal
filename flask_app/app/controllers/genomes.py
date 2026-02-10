@@ -196,11 +196,11 @@ def get_overview():
             sql_filter += " and genomes.id<>?"
             sql_filter_params.append(request.args.get("exclude_id"))
         if ('GCF' in search_value) or ('GCA' in search_value):
-            ncbi_ids=pd.read_csv(conf["ncbi_ids_path"]),sep='\t')
-            temp=ncbi_ids.loc[ncbi_ids['ncbi_id']==search_value, 'npdc_id']
+            ncbi_ids = pd.read_csv(conf["ncbi_ids_path"],sep='\t')
+            temp = ncbi_ids.loc[ncbi_ids['ncbi_id'] == search_value, 'npdc_id']
             if len(temp)>0:
                 search_value=str(temp.values[0])
-                
+        
 
         short_circuit = False
         # If the search is a pure integer and it exists as an npdc_id, return only that row
