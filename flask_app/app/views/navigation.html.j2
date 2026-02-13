@@ -36,31 +36,7 @@
       <div><strong class="text-muted">{{ num_jobs_pending }}</strong> jobs pending</div>
     </div>
   </div>
-  {% macro toggle_div(name, checked=False, left_label=None, right_label=None) -%}
-  <div class="toggle" data-name="{{ name }}" role="switch" aria-checked="{{ 'true' if checked else 'false' }}" tabindex="0">
-    {% if left_label %}<span class="toggle-label left">{{ left_label }}</span>{% endif %}
-    <div class="track"><div class="thumb"></div></div>
-    {% if right_label %}<span class="toggle-label right">{{ right_label }}</span>{% endif %}
-  </div>
-  {%- endmacro %}
-
-  <style>
-    .toggle{display:inline-flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none}
-    .track{width:44px;height:24px;background:#ccc;border-radius:12px;position:relative;transition:.2s}
-    .toggle[aria-checked="true"] .track{background:#4caf50}
-    .thumb{position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s;left:2px;top:2px}
-    .toggle[aria-checked="true"] .thumb{transform:translateX(20px)}
-    .toggle-label{font-size:.8rem;white-space:nowrap;opacity:.5;transition:.2s}
-    .toggle[aria-checked="true"] .toggle-label.left{opacity:1}
-    .toggle[aria-checked="false"]  .toggle-label.right{opacity:1}
-  </style>
   <div class="list-group panel">
-    <div class="list-group-item">
-        {{toggle_div('npdc_filter',
-              checked=include,
-              left_label='Include RefSeq',
-              right_label='') }}
-    </div>
     {% for nav_item in nav_items %}
       {% if nav_item[1] is string %}
         <a href="{{ nav_item[1] }}" class="list-group-item list-group-item-info list-group-item-action {{ 'active' if request.path.split('/')[1] == nav_item[1].split('/')[1] else '' }}" data-parent="#MainMenu">{{ nav_item[0] }}</a>
@@ -81,29 +57,4 @@
     <br />
     (c) Shen Lab '22
   </div>
-
-<script>
-  if (!window.__toggleInit) {
-    window.__toggleInit = true;
-
-    document.addEventListener('click', (e) => {
-      const t = e.target.closest('.toggle');
-      if (!t) return;
-      const on = t.getAttribute('aria-checked') === 'true';
-      const next = !on;
-      t.setAttribute('aria-checked', String(next));
-      fetch('{{ url_for("toggle_global") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-    });
-
-    document.addEventListener('keydown', (e) => {
-      const tgt = e.target.closest('.toggle');
-      if (!tgt) return;
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); tgt.click(); }
-    });
-  }
-</script>
 </div>

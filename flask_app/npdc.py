@@ -21,8 +21,6 @@ from app.controllers import home, strains, genomes, bgcs
 from app.controllers import feedback, about, query
 from app.controllers import dashboard
 
-INCLUDE_REFSEQ=False
-
 def portal():
     # check accounts db
     if not path.exists(conf["user_db_path"]):
@@ -64,7 +62,6 @@ def portal():
 
     # enable Flask debug mode
     app.config['DEBUG'] = True
-    app.config['db_path'] = conf["db_path_refseq"]
 
     # secret key for session
     app.secret_key = getenv('SESSION_KEY')
@@ -170,33 +167,7 @@ def portal():
             avg_jobs_processing_time=avg_jobs_processing_time,
             important_message=important_message
         )
-    
-    @app.context_processor
-    def inject_toggle_state():
-        # Make "include" available to all templates, defaulting to the global
-        include = session.get('INCLUDE_REFSEQ', INCLUDE_REFSEQ)
-        return dict(include=include)
 
-    from flask import jsonify
-
-    @app.route('/toggle-global', methods=['POST'])
-    def toggle_global():
-        data = request.get_json(silent=True) or {}
-        value = bool(data.get('value'))
-        # Persist per-user
-        session['INCLUDE_REFSEQ'] = value
-        session['diamond_file'] = 1 if value else 0
-        return jsonify(ok=True, value=value)
-
-    @app.get('/')
-    def index():
-        # No need to pass "include" explicitly; context_processor injects it
-        return render_template('navigation.html.j2')
-    
-    @app.before_request
-    def set_default_session_values():
-        session.setdefault('diamond_file', 0)
-        session.setdefault('INCLUDE_REFSEQ', INCLUDE_REFSEQ)
     return app
 
 
@@ -228,4 +199,3 @@ if __name__ == "__main__":
         port=port,
         application=app
     )
-

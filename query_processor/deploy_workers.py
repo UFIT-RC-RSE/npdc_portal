@@ -17,22 +17,16 @@ import json
 def fetch_pending_jobs(jobs_db):
     with connect(jobs_db) as con:
         cur = con.cursor()
-        return [(row[0], row[1]) for row in cur.execute((
-            "select id, refseq"
+        return [row[0] for row in cur.execute((
+            "select id"
             " from jobs"
             " where status=0"
             " order by submitted asc"
         )).fetchall()]
 
 
-
 def deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_size_gb, use_srun, num_genomes_limit):
-    for job_id, refseq in pending:
-        if refseq==1:
-            portalname="npdc_portal_refseq.dmnd"
-            npdc_db = str(npdc_db).replace("npdc_portal.db", "npdc_portal_searchable_refseq.db")
-        else:
-            portalname="npdc_portal.dmnd"
+    for job_id in pending:
         print("PROCESSING: job#{}".format(job_id))
         # update status to "PROCESSING"
         with connect(jobs_db) as con:
@@ -67,7 +61,7 @@ def deploy_jobs(pending, jobs_db, npdc_db, instance_folder, num_threads, ram_siz
             diamond_blast_db_path = path.join(
                 getenv('INSTANCE_GLOBAL_PATH'),
                 "db_data",
-                portalname
+                "npdc_portal.dmnd"
             )
             blast_output_path = path.join(temp_dir, "output.txt")
             blast_tmpdir = path.join(getenv('INSTANCE_GLOBAL_PATH'), 'tmp')

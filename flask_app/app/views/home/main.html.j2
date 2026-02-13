@@ -30,17 +30,6 @@
       </svg>
     </div>
   </div>
-  <div class="row">
-    <div class="col text-center m-4">
-      <h2 style="margin-bottom: 0.5rem;">New capabilities of the NPDC with RefSeq</h2>
-      <ul style="display: inline-block; text-align: left; font-size: 18px; margin: 0.5rem auto 0;">
-        <li>AntiSMASH 8 Annotations for 25,000 Actinobacterial genomes are now available!</li> 
-        <li>Use these data to assess the novelty of a genome or BGC.</li>
-        <li>RefSeq or GenBank accession numbers are now searchable under genomes and included in BLAST results.</li>
-        <li>Search by MIBiG natural product name under BGCs.</li>
-      </ul>
-    </div>
-  </div>
 
   <div class="row">
     <div class="col text-center" style="font-size: 20px;">
@@ -72,11 +61,11 @@
           <circle cx="250" cy="125" r="100" stroke="#555555" stroke-width="1" fill="#EBEEF1" class="click_below_shape"></circle>
           <text text-anchor="middle" x="250" y="130" fill="black" font-size="35" font-weight="bold" class="click_below_text">Explore</text>
         </g>
-        <g class="click_below" url="{{ url_for('strains.page_strains') }}">
+        <g class="click_below" url="{{ url_for('genomes.page_genomes') }}">
           <rect x="35" y="40" rx="5" ry="5" width="150" height="50" stroke="#555555" stroke-width="1" fill="#EBEEF1" class="click_below_shape"></rect>
           <text text-anchor="middle" x="110" y="70" fill="black" font-size="20" font-weight="bold" class="click_below_text">Strains</text>
         </g>
-        <g class="click_below" url="{{ url_for('bgcs.page_bgcs') }}">
+        <g class="click_below" url="{{ url_for('genomes.page_genomes') }}">
           <rect x="15" y="100" rx="5" ry="5" width="150" height="50" stroke="#555555" stroke-width="1" fill="#EBEEF1" class="click_below_shape"></rect>
           <text text-anchor="middle" x="90" y="130" fill="black" font-size="20" font-weight="bold" class="click_below_text">BGCs</text>
         </g>

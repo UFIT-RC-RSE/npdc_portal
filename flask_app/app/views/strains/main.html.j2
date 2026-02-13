@@ -86,27 +86,21 @@ ase Strain" button on the strain-specific page.
                 aLengthMenu: [[50, 100, 500], [50, 100, 500]],
                 iDisplayLength: 50,
                 ajax: {
-                    url: "{{ url_for('root.page') }}api/strains/get_overview",
-                    type: "GET",
-                    data: function(d) {
-                    }
+                        url: "{{ url_for('root.page') }}api/strains/get_overview",
+                        type: "GET",
+                        data: function(d) {
+                                //
+                        }
                 },
-                language: {
-                    info: "Showing _START_ to _END_ of 122,552 entries"
-                },
-                language: {
-                    infoFiltered: ""
-                },
-                "columnDefs": [
+                                "columnDefs": [
                 { className: "text-center", targets: [0, 2] },
                 { className: "text-end", targets: [] },
-                { visible: false, searchable: false, targets: [6] },
+          { visible: false, searchable: false, targets: [6] },
                 {
                   targets: 0,
                   render: function(data, type, row, meta) {
                     let npdc_id = data;
-                    let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
-                        return "<a href=\"{{ url_for('root.page') }}strains/view/" + npdc_id + "\"><button class=\"btn btn-primary\">" + prefix + "-" +                                    npdc_id + "</button></a>";
+                    return "<a href=\"{{ url_for('root.page') }}strains/view/" + npdc_id + "\"><button class=\"btn btn-primary\">NPDC-" + npdc_id + "</button></a>";
                   }
                 },
                 {
