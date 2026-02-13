@@ -11,7 +11,7 @@ from flask import jsonify
 import sys
 
 # import global config
-from ..config import conf, get_npdc_db_path
+from ..config import conf
 from ..session import check_logged_in
 
 # set blueprint object
@@ -54,7 +54,7 @@ def page_genomes_view(genome_id):
         npdc_id = pd.read_sql_query((
             "select npdc_id from genomes"
             " where id=?"
-        ), sqlite3.connect(get_npdc_db_path(session)), params=(genome_id, )).iloc[0, 0]
+        ), sqlite3.connect(conf["db_path"]), params=(genome_id, )).iloc[0, 0]
     except:
         flash("can't find genome id", "alert-danger")
         return redirect(url_for("home.page_home"))
@@ -102,7 +102,7 @@ def page_genomes_download(genome_id):
         genome_data = pd.read_sql_query((
             "select * from genomes"
             " where id=?"
-        ), sqlite3.connect(get_npdc_db_path(session)), params=(genome_id, )).iloc[0].to_dict()
+        ), sqlite3.connect(conf["db_path"]), params=(genome_id, )).iloc[0].to_dict()
     except:
         flash("can't find genome id", "alert-danger")
         return redirect(url_for("home.page_home"))
@@ -170,7 +170,7 @@ def get_overview():
     result["draw"] = request.args.get('draw', type=int)
     limit = request.args.get('length', type=int)
     offset = request.args.get('start', type=int)
-    search_value = request.args.get('search[value]', default="", type=str).strip()
+    search_value = request.args.get('search[value]', default="", type=str)
 
     # Column name mapping
     column_mapping = {
@@ -184,37 +184,20 @@ def get_overview():
     }
 
     default_numeric_columns = ["npdc_id", "genome_gc", "num_bgcs", "genomes_known_bgcs"]
-    
-    with sqlite3.connect(get_npdc_db_path(session)) as con:
+
+    with sqlite3.connect(conf["db_path"]) as con:
         cur = con.cursor()
         sql_filter = "1"
         sql_filter_params = []
+        print(conf["db_path"], file=sys.stderr, flush=True)
         if request.args.get("mash_group", "") != "":
             sql_filter += " and genome_mash_species like ?"
             sql_filter_params.append(request.args.get("mash_group"))
         if request.args.get("exclude_id", "") != "":
             sql_filter += " and genomes.id<>?"
             sql_filter_params.append(request.args.get("exclude_id"))
-        if ('GCF' in search_value) or ('GCA' in search_value):
-            ncbi_ids = pd.read_csv(conf["ncbi_ids_path"],sep='\t')
-            temp = ncbi_ids.loc[ncbi_ids['ncbi_id'] == search_value, 'npdc_id']
-            if len(temp)>0:
-                search_value=str(temp.values[0])
-        
 
-        short_circuit = False
-        # If the search is a pure integer and it exists as an npdc_id, return only that row
-        if search_value.isdigit():
-            cur.execute("SELECT 1 FROM genomes WHERE npdc_id = ? LIMIT 1", (int(search_value),))
-            if cur.fetchone():
-                sql_filter = "genomes.npdc_id = ?"
-                sql_filter_params = [int(search_value)]
-                short_circuit = True
-                limit = 1
-                offset = 0  # ensure the single result is returned
-        
-        # Fall back to the generic filter only if we didn't short-circuit
-        if search_value and not short_circuit:
+        if search_value:
             is_numeric_search = search_value.replace('.', '', 1).isdigit()
             parts = re.split(r'\s+and\s+', search_value, flags=re.IGNORECASE)
             for part in parts:
@@ -222,9 +205,9 @@ def get_overview():
                 part = part.strip()
                 if '[' in part and ']' in part:
                     term, user_column_with_bracket = part.split('[', 1)
-                    user_column = user_column_with_bracket.rsplit(']', 1)[0].strip()
+                    user_column = user_column_with_bracket.rsplit(']', 1 )[0].strip()
                     term = term.strip()
-                    db_column = column_mapping.get(user_column, None)
+                    db_column = column_mapping.get(user_column, None )
                     if db_column:
                         if db_column in default_numeric_columns:
                             numeric_filter, numeric_params = construct_numeric_filter(term, db_column)
@@ -232,9 +215,10 @@ def get_overview():
                             sql_filter_params.extend(numeric_params)
                             part_handled = True
                         else:
-                            sql_filter += f" and {db_column} LIKE ?"
+                            sql_filter += f" and {db_column} LIKE ?".format(db_column=db_column)
                             sql_filter_params.append(f"%{term}%")
                             part_handled = True
+
                 if not part_handled:
                     generic_filter = " OR ".join([f"{col} LIKE ?" for col in column_mapping.values()])
                     sql_filter += f" and ({generic_filter})"
@@ -248,6 +232,7 @@ def get_overview():
         )).fetchall()[0][0]
         cur.execute("SELECT * FROM genomes LIMIT 0")
         columnnames = [desc[0] for desc in cur.description]
+        print(columnnames, file=sys.stderr, flush=True)
         sql_query = ''.join([
             "select count(id) from (",
             "select * from genomes left join genomes_cached on genomes.id=genomes_cached.genome_id",
@@ -321,7 +306,7 @@ def get_cds_list():
     if bgc_id == "" and genome_id == "":
         return "" # need to specify either genome_id or bgc_id
 
-    with sqlite3.connect(get_npdc_db_path(session)) as con:
+    with sqlite3.connect(conf["db_path"]) as con:
         cur = con.cursor()
         query_filter = "1"
         query_filter_params = []

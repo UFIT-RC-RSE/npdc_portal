@@ -75,37 +75,4 @@ if __name__ == "__main__":
                     conf["knowncb_cutoff"]
                 ),
             }]).to_sql("logs", con, index=False, if_exists="append")
-
-    # do th same for the refseq option db
-    with sqlite3.connect(conf["db_path_refseq"]) as con:
-        cur = con.cursor()
-        generate_new_cache = True
-        logs_cache_generation = pd.read_sql_query((
-            "select * from logs where message like 'generating db cache: %' order by time desc"
-        ), con)
-        if logs_cache_generation.shape[0] == 0:
-            generate_new_cache = True
-        else:
-            params={
-                x.split("=")[0]:x.split("=")[1] for x in logs_cache_generation.iloc[0]["message"].split("generating db cache: ")[-1].split(";")
-            }
-            if params.get("knowncb_cutoff", None) != str(conf["knowncb_cutoff"]):
-                generate_new_cache = True
-        if generate_new_cache:
-            print("generating cache tables...")
-            print("Source db:")
-            print(path.join(path.dirname(path.dirname(path.realpath(__file__))), "sql_schemas", "sql_schema_db_cache.txt"))
-            cur.executescript(
-                open(
-                    path.join(path.dirname(path.dirname(path.realpath(__file__))), "sql_schemas", "sql_schema_db_cache.txt")
-                ).read().replace("--knowncb_cutoff--", str(conf["knowncb_cutoff"]))
-            )
-            con.commit()
-            pd.DataFrame([{
-                "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "message": "generating db cache: knowncb_cutoff={}".format(
-                    conf["knowncb_cutoff"]
-                ),
-            }]).to_sql("logs", con, index=False, if_exists="append")
-
     print("done.")
