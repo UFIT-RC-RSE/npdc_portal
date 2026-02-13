@@ -5,7 +5,13 @@
     <div class="col-8">
       <div class="row">
         <div class="col">
-          <h1 id="page_title">BGC ID: {{ bgc_data["name"] }}</h1>
+          <h1 id="page_title">
+            BGC ID:
+            {% set name = bgc_data["name"] %}
+            {% set first = name.split('.')[0].split('_')[0] %}
+            {% set num = (first[4:] | int if first[:4] == 'NPDC' else -1) %}
+            {{ name | replace('NPDC', 'REFSEQ') if num >= 200000 else name }}
+          </h1>
         </div>
       </div>
       <div class="row">
@@ -71,7 +77,9 @@
                     Genome
                   </div>
                   <div class="col">
-                    : <a href="#">{{ "NPDC-{}".format(bgc_data["npdc_id"]) }}</a>
+                    <a href="#">
+                    : {{ ('REFSEQ-' ~ bgc_data['npdc_id']) if (bgc_data['npdc_id'] | int >= 200000) else ('NPDC-' ~ bgc_data['npdc_id']) }}
+                    </a>
                   </div>
                 </div>
                 <div class="row">
@@ -303,7 +311,8 @@
                                 targets: 0,
                                 render: function(data, type, row, meta) {
                                   let [genome_id, npdc_id] = data;
-                                  let label = "NPDC-" + npdc_id;
+                                  let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                                  let label = prefix + "-" + npdc_id;
                                   return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                                 }
                               },
@@ -318,7 +327,8 @@
                                 render: function(data, type, row, meta) {
                                   let [bgc_id, npdc_id, contig_num, region_name] = data;
                                   let bgc_num = parseInt(region_name.split("region")[1], 10);
-                                  let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                     
+                                  let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                                  let label = prefix + "-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                     
                                   return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                                 }
                               },

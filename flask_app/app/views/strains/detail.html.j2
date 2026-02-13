@@ -5,7 +5,9 @@
     <div class="col-8">
       <div class="row">
         <div class="col">
-          <h1 id="page_title">NPDC ID: {{ strain_data["npdc_id"] }}</h1>
+          <h1 id="page_title">
+          NPDC ID: {{ strain_data["npdc_id"] }}{% if strain_data["npdc_id"] >= 200000 %} (RefSeq){% endif %}
+          </h1>
         </div>
       </div>
       <div class="row">
@@ -59,6 +61,9 @@
       </div>
       <div class="row m-2">
         <div class="col">
+	  {% if strain_data["npdc_id"] >= 200000  %}
+          <button class="btn btn-primary disabled">Not NPDC Strain</button>
+          {% else %}
           <button id="btn_request_strain" class="btn btn-info">Request Strain</button>
           <script type="text/javascript">
             $("#btn_request_strain").click(function() {
@@ -68,6 +73,7 @@
               location.href = "mailto:" + mail_target + "?subject=" + mail_subject + "&body=" + mail_body;
             });
           </script>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -240,6 +246,15 @@
                       : {{ "{:.1f}%".format(strain_data["genome_gc"]) if strain_data["genome_gc"] != "n/a" else "n/a" }}
                     </div>
                   </div>
+                  <div class="row">
+                    <div class="col-3">
+                      NCBI ID
+                    </div>
+                    <div class="col">
+                      : {{ strain_data["ncbi_id"]}}
+                    </div>
+                  </div>
+
                 </div>
               </div>
             </div>
@@ -329,7 +344,8 @@
                                   targets: 0,
                                   render: function(data, type, row, meta) {
                                     let [genome_id, npdc_id] = data;
-                                    let label = "NPDC-" + npdc_id;
+                                    let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                                    let label = prefix + "-" + npdc_id;
                                     return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                                   }
                                 },
@@ -344,7 +360,8 @@
                                   render: function(data, type, row, meta) {
                                     let [bgc_id, npdc_id, contig_num, region_name] = data;
                                     let bgc_num = parseInt(region_name.split("region")[1], 10);
-                                    let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                   
+                                    let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                                    let label = prefix + '-' + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;                   
                                     return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                                   }
                                 },
@@ -414,14 +431,14 @@
             <div class="accordion-item">
               <h2 class="accordion-header" id="heading_general">
                 <button class="accordion-button" type="button" data-toggle="collapse" data-target="#collapse_genome" aria-expanded="true" aria-controls="collapse_genome">
-                  <strong>Mash Group: {{ strain_data["genome_mash_species"] }}</strong>
+                  <strong>Mash Group: {{strain_data["genome_mash_species"]}}</strong>
                 </button>
               </h2>
               <div id="collapse_genome" class="accordion-collapse collapse show" aria-labelledby="heading_genome">
                 <div class="accordion-body">
                   <div class="row">
                     <div class="col">
-                      Related strains: 0
+                      Related strains: <span id="related_count">0</span>
                     </div>
                   </div>
                   <div class="row mt-4">
@@ -464,8 +481,9 @@
                                 {
                                   targets: 0,
                                   render: function(data, type, row, meta) {
-                                    let [genome_id, npdc_id] = data
-                                    return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">NPDC-" + npdc_id + "</button></a>";
+                                  const [genome_id, npdc_id] = data;
+                                  const label = (Number(npdc_id) >= 200000) ? `REFSEQ-${npdc_id}` : `NPDC-${npdc_id}`;
+                                  return `<a href="{{ url_for('root.page') }}genomes/view/${genome_id}"><button class="btn btn-primary">${label}</button></a>`;
                                   }
                                 },
                                 {
@@ -503,8 +521,18 @@
                                     return data;
                                   }
                                 }
-                              ]
-                            });
+                              ],
+                                initComplete: function(settings, json){
+                                      const n = (json && (json.recordsFiltered ?? json.recordsTotal)) ?? 0;
+                                      $('#related_count').text(n);
+                                    }
+                                  });
+
+                                  table.on('xhr.dt', function(){
+                                    const json = table.ajax.json() || {};
+                                    const n = (json.recordsFiltered ?? json.recordsTotal) ?? 0;
+                                    $('#related_count').text(n);
+                                });
                           });
                         </script>
                       </table>

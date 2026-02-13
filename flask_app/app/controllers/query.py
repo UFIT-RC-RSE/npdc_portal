@@ -11,7 +11,7 @@ from os import path, remove
 import glob
 
 # import global config
-from ..config import conf
+from ..config import conf, get_npdc_db_path
 from ..session import check_logged_in
 
 #
@@ -214,9 +214,9 @@ def submit_new_job(user_id, input_proteins):
         # submit job and get the new id back
         cur = con.cursor()
         cur.execute((
-            "INSERT INTO jobs (userid, submitted, status)"
-            " VALUES (?, ?, ?)"
-        ), (user_id, datetime.now(), -2))
+            "INSERT INTO jobs (userid, submitted, status, refseq)"
+            " VALUES (?, ?, ?, ?)"
+        ), (user_id, datetime.now(), -2, session['diamond_file']))
         con.commit()
         job_id = cur.lastrowid
 
@@ -249,8 +249,7 @@ def get_results_list():
     type_req = request.args.get('type', type=str)
     job_id = request.args.get('jobid', type=int)
     query_protein_id = request.args.get('protid', type=int)
-
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         cur = con.cursor()
         cur.execute("ATTACH DATABASE ? AS job_db", (conf["query_db_path"],))
 
@@ -370,10 +369,11 @@ def page_download_result(job_id):
     else:
         return "wrong_request"
 
-    output_filepath = path.join(conf["temp_download_folder"], "blast-{}-{}-{}.zip".format(
+    output_filepath = path.join(conf["temp_download_folder"], "blast-{}-{}-{}-{}.zip".format(
         job_id,
         file_type,
-        ",".join([str(prot_id) for prot_id in query_prot_ids])
+        ",".join([str(prot_id) for prot_id in query_prot_ids]),
+        str(job_data["refseq"])
     ))
 
     if action == "prepare":
