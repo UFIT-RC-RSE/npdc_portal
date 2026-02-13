@@ -10,7 +10,7 @@ import pandas as pd
 import logging
 
 # Configure logging
-logging.basicConfig(filename='init_db.log', level=logging.INFO)
+logging.basicConfig(filename=path.join(conf["instance_folder"], "init_db.log"), level=logging.INFO)
 
 def check_and_add_column(con, table, column, dtype):
     """Check if a column exists in a table, and add it if it does not."""
