@@ -8,8 +8,7 @@
         <strong>Using the search bar:</strong><br>The general format of a search query is: &lt;query&gt;[&lt;column name&gt;]<br>For example, Streptomyces[Taxonomy] will query the Taxonomy column for the word Streptomyces.<br>Filter more than one column by using "an
 d".<br>For example, searching both Taxonomy and Num. of genes would look like this: Streptomyces[Taxonomy] and 10[Num. of genes]<br>The NPDC No., GCF, Num. of genes, and Size (kb) columns only accept numerical entries. Do not include "NPDC-" or "GCF-" prefixes in yo
 ur search.<br>Numerical searching allows filtering for a range of numbers using - and to filter with &lt; and &gt;<br>For example, filtering the Num. of genes could look like: 2-5[Num. of genes], &lt;6[Num. of genes], or &gt;3[Num. of genes]<br>The BGC quality colum
-n only accepts "complete" or "fragmented".<br>The BGC class column allow list searches where items are linked together with a pipe "|".<br>For example: NRPS|indole[BGC class] does an inclusive search for NRPS and indole in the BGC class column.<br>The MIBiG hit colu
-mn only accepts BGC IDs, for example: BGC0000271[MIBiG hit]
+n only accepts "complete" or "fragmented".<br>The BGC class column allow list searches where items are linked together with a pipe "|".<br>For example: NRPS|indole[BGC class] does an inclusive search for NRPS and indole in the BGC class column.<br>The MIBiG hit column accepts BGC IDs, for example: BGC0000271[MIBiG hit], or MiBIG natural product names, such as hopene.
       </div>
     </div>
   </div>
@@ -103,7 +102,8 @@ s), x (x genomes), x (x genomes), and x (x genomes).
                   targets: 0,
                   render: function(data, type, row, meta) {
                     let [genome_id, npdc_id] = data;
-                    let label = "NPDC-" + npdc_id;
+                    let prefix = npdc_id >= 200000 ? 'REFSEQ-' : 'NPDC-';
+                    let label = prefix + npdc_id;
                     return "<a href=\"{{ url_for('root.page') }}genomes/view/" + genome_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                   }
                 },
@@ -118,7 +118,8 @@ s), x (x genomes), x (x genomes), and x (x genomes).
                   render: function(data, type, row, meta) {
                     let [bgc_id, npdc_id, contig_num, region_name, bgc_region_contig] = data;
                     let bgc_num = parseInt(region_name.split("region")[1], 10);
-                    let label = "NPDC-" + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;
+                    let prefix = npdc_id >= 200000 ? 'REFSEQ' : 'NPDC';
+                    let label = prefix + npdc_id + ":" + "r" + contig_num + "c" + bgc_num;
                     return "<a href=\"{{ url_for('root.page') }}bgcs/view/" + bgc_id + "\"><button class=\"btn btn-primary\">" + label + "</button></a>";
                   }
                 },

@@ -12,6 +12,9 @@ conf = {
 
 conf["db_path_original"] = path.join(conf["instance_folder"], "db_data/npdc_portal.db")
 conf["db_path"] = path.join(conf["instance_folder"], "db_data/npdc_portal_searchable.db")
+conf["db_path_no_refseq"] = path.join(conf["instance_folder"], "db_data/npdc_portal_searchable.db")
+conf["db_path_refseq"] = path.join(conf["instance_folder"], "db_data/npdc_portal_searchable_refseq.db")
+conf["nbci_ids_path"] = path.join(conf["instance_folder"], "db_data/ncbi_ids.tsv")
 conf["cds_fasta_path"] = path.join(conf["instance_folder"], "db_data/npdc_portal.fasta")
 conf["genome_folder_path"] = path.join(conf["instance_folder"], "db_data/genome_files/")
 conf["bgc_folder_path"] = path.join(conf["instance_folder"], "db_data/bgc_files/")
@@ -25,3 +28,16 @@ conf["is_in_beta"] = False
 conf["launch_datetime"] = "1901-01-01 00:00:00"
 conf["knowncb_cutoff"] = 80
 conf["consecutive_download_duration"] = 15 # in seconds
+
+def get_npdc_db_path(session: dict) -> str:
+    """
+    Returns the appropriate sqlite database path based on
+    user session data
+
+    Args:
+      session: session dict (flask.session)
+
+    Returns:
+      str path to the relevant db file (usually in /instance/db_data)
+    """
+    return conf['db_path_refseq'] if session['INCLUDE_REFSEQ'] else conf['db_path_no_refseq']
