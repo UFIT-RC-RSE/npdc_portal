@@ -10,7 +10,7 @@ from datetime import datetime
 from calendar import monthrange
 
 # import global config
-from ..config import conf
+from ..config import conf, get_npdc_db_path
 from ..session import check_logged_in
 
 from .genomes import get_assembly_grade
@@ -87,7 +87,7 @@ def page_strains_detail(npdc_id):
     if not check_logged_in():
         return redirect(url_for("login.page_login"))
 
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         strain_data = pd.read_sql_query((
             "select strains.*, genomes.*, genomes.id as genome_id,"
             " strains_cached.alt_ids, strains_cached.medias"
@@ -96,14 +96,11 @@ def page_strains_detail(npdc_id):
             " where strains.npdc_id=?"
             " limit 1"
         ),  con, params=(npdc_id, )).fillna("")
-
         if strain_data.shape[0] < 1:
             flash("can't find strain id", "alert-danger")
             return redirect(url_for("home.page_home"))
-
         strain_data = strain_data.iloc[0]
         strain_data = strain_data.groupby(strain_data.index).first()
-
         if strain_data["genome_id"] != "":
             strain_data["complete_bgcs"] = pd.read_sql_query((
                 "select count(id)"
@@ -119,7 +116,8 @@ def page_strains_detail(npdc_id):
                 "select count(id)"
                 " from bgcs inner join bgc_mibig_hit on bgcs.id=bgc_mibig_hit.bgc_id"
                 " where bgcs.genome_id=?"
-            ),  con, params=[strain_data["genome_id"]]).iloc[0, 0]
+            ),  con, params=[int(strain_data["genome_id"])]).iloc[0, 0]
+            
             strain_data["genome_quality"] = get_assembly_grade(strain_data)
         else:
             strain_data["complete_bgcs"] = ""
@@ -131,7 +129,7 @@ def page_strains_detail(npdc_id):
 
         if strain_data["collection_date"] != "":
             strain_data["collection_date"] = datetime.strftime(
-                datetime.strptime(strain_data["collection_date"], "%Y-%m-%d"), "%B %-m, %Y"
+                datetime.strptime(strain_data["collection_date"], "%Y-%m-%d"), "%B %m, %Y"
             )
 
         try:
@@ -245,7 +243,7 @@ def get_overview():
 
     default_numeric_columns = ['strains.npdc_id']
 
-    with sqlite3.connect(conf["db_path"]) as con:
+    with sqlite3.connect(get_npdc_db_path(session)) as con:
         cur = con.cursor()
         sql_filter = "1"
         sql_filter_params = []
@@ -320,6 +318,7 @@ def get_overview():
             "LEFT JOIN genomes ON strains.npdc_id = genomes.npdc_id ",
             "LEFT JOIN strains_cached ON strains.npdc_id = strains_cached.npdc_id ",
             "WHERE 1=1 ",
+            "AND strains.npdc_id < 200000 ",
             (f"AND {sql_filter} " if sql_filter != "1" else ""),
         ])
 
@@ -333,6 +332,7 @@ def get_overview():
             "LEFT JOIN genomes ON strains.npdc_id = genomes.npdc_id ",
             "LEFT JOIN strains_cached ON strains.npdc_id = strains_cached.npdc_id ",
             "WHERE 1=1 ",
+            "AND strains.npdc_id < 200000 ",
             (f"AND {sql_filter} " if sql_filter != "1" else ""),
         ]), tuple([*sql_filter_params])).fetchall()[0][0]
 
@@ -351,6 +351,7 @@ def get_overview():
             "LEFT JOIN strains_cached ON strains.npdc_id = strains_cached.npdc_id ",
             "WHERE 1=1 ",
             (f"AND {sql_filter} " if sql_filter != "1" else ""),
+            "AND strains.npdc_id < 200000 ",
             "ORDER BY strains.npdc_id ",
             "LIMIT ? OFFSET ?",
         ]), con, params=tuple([*sql_filter_params, limit, offset])).fillna("")

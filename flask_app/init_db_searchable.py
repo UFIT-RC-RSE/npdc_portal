@@ -21,6 +21,35 @@ def check_and_add_column(con, table, column, dtype):
         cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {dtype}")
         con.commit()
 
+def add_refseq_query_column(tablepath):
+    """Check if the queries.db jobs table has an include refseq column, adds if not"""
+    with sqlite3.connect(tablepath) as con:
+        cur = con.cursor()
+        cur.execute("PRAGMA table_info(jobs)")
+        columns = [info[1] for info in cur.fetchall()]
+        if 'refseq' not in columns:
+            cur.execute("ALTER TABLE jobs ADD COLUMN refseq INTEGER NOT NULL DEFAULT 0")
+            con.commit()
+
+def check_and_add_ncbi_ids(con, path):
+    cur = con.cursor()
+    cur.execute("PRAGMA table_info(strains)")
+    columns = [info[1] for info in cur.fetchall()]
+    if 'ncbi_id' not in columns:
+        existing_df = pd.read_sql_query('SELECT * FROM strains', con)
+        ncbi_ids=pd.read_csv(path, sep='\t')
+        ncbi_ids['ncbi_id']=ncbi_ids['ncbi_id'].fillna('NA')
+        merged_df = existing_df.merge(ncbi_ids, on='npdc_id', how='inner')
+        print(merged_df.to_string())
+        cur.execute("ALTER TABLE strains ADD COLUMN ncbi_id TEXT")
+        for index, row in merged_df.iterrows():
+            con.execute("""
+            UPDATE strains
+            SET ncbi_id = ?
+            WHERE npdc_id = ?;
+            """, (row['ncbi_id'], row['npdc_id']))
+        con.commit()
+        
 def populate_bgc_size_column(con):
     """Populate the bgc_size_kb column with calculated values."""
     cur = con.cursor()
@@ -234,6 +263,7 @@ if __name__ == "__main__":
             with open(schema_sql, "r") as sql_script:
                 cur.executescript(sql_script.read())
                 con.commit()
+    add_refseq_query_column(conf["query_db_path"])
     # check and generate npdc_db cache tables
     with sqlite3.connect(conf["db_path"]) as con:
         cur = con.cursor()
@@ -248,6 +278,7 @@ if __name__ == "__main__":
         check_and_add_column(con, 'genomes_cached', 'genomes_known_bgcs', 'INTEGER')
         check_and_add_column(con, 'strains_cached', 'strain_name', 'TEXT')
         check_and_add_column(con, 'strains', 'genome_available', 'TEXT')
+        check_and_add_ncbi_ids(con, conf["db_path"].replace('npdc_portal_searchable.db', 'ncbi_ids.tsv'))
 
         populate_bgc_size_column(con)
         populate_bgc_name_column(con)
@@ -287,5 +318,58 @@ if __name__ == "__main__":
                     conf["knowncb_cutoff"]
                 ),
             }]).to_sql("logs", con, index=False, if_exists="append")
+    if conf["db_path_refseq"] != conf["db_path"]:
+        with sqlite3.connect(conf["db_path_refseq"]) as con:
+            cur = con.cursor()
+            
+            check_and_add_column(con, 'bgcs', 'bgc_size_kb', 'REAL')
+            check_and_add_column(con, 'bgcs_cached', 'bgc_name', 'TEXT')
+            check_and_add_column(con, 'bgcs_cached', 'bgc_region_contig', 'TEXT')
+            check_and_add_column(con, 'bgcs', 'fragmented_status', 'TEXT')
+            check_and_add_column(con, 'bgcs_cached', 'mibig_hit_display', 'TEXT')
+            check_and_add_column(con, 'genomes_cached', 'genome_name', 'TEXT')
+            check_and_add_column(con, 'genomes', 'genome_assembly_grade', 'TEXT')
+            check_and_add_column(con, 'genomes_cached', 'genomes_known_bgcs', 'INTEGER')
+            check_and_add_column(con, 'strains_cached', 'strain_name', 'TEXT')
+            check_and_add_column(con, 'strains', 'genome_available', 'TEXT')
+            check_and_add_ncbi_ids(con, conf["db_path_refseq"].replace('npdc_portal_searchable_refseq.db', 'ncbi_ids.tsv'))
+            
+            populate_bgc_size_column(con)
+            populate_bgc_name_column(con)
+            populate_bgc_label_column(con)
+            populate_fragmented_status_column(con)
+            populate_mibig_hit_display_column(con)
+            populate_genome_name_column(con)
+            populate_assembly_status(con)
+            populate_genomes_known_bgcs(con)
+            populate_strain_name_column(con)
+            populate_genome_available_column(con)
 
+            generate_new_cache = False
+            logs_cache_generation = pd.read_sql_query((
+                "select * from logs where message like 'generating db cache: %' order by time desc"
+            ), con)
+            if logs_cache_generation.shape[0] == 0:
+                generate_new_cache = True
+            else:
+                params={
+                    x.split("=")[0]:x.split("=")[1] for x in logs_cache_generation.iloc[0]["message"].split("generating db cache: ")[-1].split(";")
+                }
+                if params.get("knowncb_cutoff", None) != str(conf["knowncb_cutoff"]):
+                    generate_new_cache = True
+
+            if generate_new_cache:
+                print("generating cache tables...")
+                cur.executescript(
+                    open(
+                        path.join(path.dirname(path.dirname(path.realpath(__file__))), "sql_schemas", "sql_schema_db_cache.txt")
+                    ).read().replace("--knowncb_cutoff--", str(conf["knowncb_cutoff"]))
+                )
+                con.commit()
+                pd.DataFrame([{
+                    "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "message": "generating db cache: knowncb_cutoff={}".format(
+                        conf["knowncb_cutoff"]
+                    ),
+                }]).to_sql("logs", con, index=False, if_exists="append")
     print("done.")
